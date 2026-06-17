@@ -1,0 +1,14 @@
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+sqlalchemy==2.0.25
+pydantic==2.6.1
+pydantic-settings==2.1.0
+pyjwt==2.8.0
+scikit-learn==1.4.0
+lightgbm==4.3.0
+catboost==1.2.2
+shap==0.44.1
+ortools==9.8.3296
+pandas==2.2.0
+numpy==1.26.4
+python-multipart==0.0.9
