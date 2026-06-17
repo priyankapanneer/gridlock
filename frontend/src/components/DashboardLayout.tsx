@@ -22,11 +22,25 @@ const ROLE_DOTS: Record<Role, string> = {
 
 export default function DashboardLayout() {
   const { user, logout, switchRole } = useAuthStore();
-  const { setIncidents, incidents } = useIncidentStore();
+  const { 
+    setIncidents, incidents, 
+    proxyAlerts, setProxyAlerts, 
+    simulationData, setSimulationData, 
+    transitData, setTransitData 
+  } = useIncidentStore();
+  
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+
+  // Sandbox simulation states
+  const [footfall, setFootfall] = useState(15000);
+  const [vehicles, setVehicles] = useState(6000);
+  const [isSimulating, setIsSimulating] = useState(false);
+  
+  // Transit overlays state
+  const [showBusLanes, setShowBusLanes] = useState(false);
 
   const fetchIncidents = async () => {
     if (!user?.token) return;
@@ -47,11 +61,82 @@ export default function DashboardLayout() {
     }
   };
 
-  const handleSwitchRole = async (targetRole: Role) => {
+  const fetchProxyAlerts = async () => {
+    if (!user?.token) return;
+    try {
+      const res = await fetch('http://localhost:8000/api/proxy-alerts', {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProxyAlerts(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const runSimulation = async () => {
+    if (!user?.token) return;
+    setIsSimulating(true);
+    try {
+      // Mock event polygon vertices around Chinnaswamy Stadium / central Bengaluru
+      const coords = [
+        [77.5960, 12.9870],
+        [77.6010, 12.9920],
+        [77.6080, 12.9830],
+        [77.5990, 12.9780]
+      ];
+      
+      const res = await fetch('http://localhost:8000/api/simulate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          coordinates: coords,
+          footfall,
+          vehicles
+        })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setSimulationData(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSimulating(false);
+    }
+  };
+
+  const toggleBusLanes = async (checked: boolean) => {
+    setShowBusLanes(checked);
+    if (!checked) {
+      setTransitData(null);
+      return;
+    }
+    if (!user?.token) return;
+    try {
+      const res = await fetch('http://localhost:8000/api/transit/multi-modal', {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTransitData(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSwitchRole = async (targetRole: Role, targetPS?: string) => {
     setShowRoleMenu(false);
     if (!user?.token) return;
     try {
-      const station = targetRole === 'Field Inspector' ? (user?.police_station || 'Yelahanka') : null;
+      const station = targetRole === 'Field Inspector' ? (targetPS || user?.police_station || 'HAL Old Airport') : null;
       const res = await fetch('http://localhost:8000/api/auth/switch-role', {
         method: 'POST',
         headers: {
@@ -67,6 +152,10 @@ export default function DashboardLayout() {
       if (res.ok) {
         const data = await res.json();
         switchRole(targetRole, station, data.access_token);
+        // Clear any simulator state when switching roles
+        setSimulationData(null);
+        setTransitData(null);
+        setShowBusLanes(false);
       }
     } catch (err) {
       console.error('Failed to switch role', err);
@@ -75,6 +164,7 @@ export default function DashboardLayout() {
 
   useEffect(() => {
     fetchIncidents();
+    fetchProxyAlerts();
   }, [user?.username, user?.role, user?.token]);
 
   const highCount = incidents.filter(i => i.priority === 'High').length;
@@ -158,8 +248,16 @@ export default function DashboardLayout() {
           {role === 'Field Inspector' && (
             <div className="p-3 rounded-lg border border-green-500/20 bg-green-500/5">
               <p className="text-[9px] text-green-400 font-bold uppercase tracking-widest mb-1">Inspector Jurisdiction</p>
-              <p className="text-xs font-semibold text-foreground">{user?.police_station || 'HAL Old Airport'} PS Division</p>
-              <p className="text-[10px] text-muted-foreground mt-1">Telemetry and clearance controls are locked to this division.</p>
+              <select
+                value={user?.police_station || 'HAL Old Airport'}
+                onChange={e => handleSwitchRole('Field Inspector', e.target.value)}
+                className="w-full mt-1.5 bg-[#0b0f19] border border-green-500/30 rounded px-2 py-1.5 text-xs text-green-300 font-semibold focus:outline-none focus:border-green-500"
+              >
+                {['Yelahanka', 'HAL Old Airport', 'Sadashivanagar', 'Halasuru Gate', 'Byatarayanapura', 'Yeshwanthpura', 'Hennuru', 'Kodigehalli', 'Banaswadi', 'K.R. Pura'].map(ps => (
+                  <option key={ps} value={ps}>{ps} PS Division</option>
+                ))}
+              </select>
+              <p className="text-[9px] text-muted-foreground mt-1.5">Telemetry and clearance controls are locked to this division.</p>
             </div>
           )}
           {role === 'Command Commissioner' && (
@@ -177,6 +275,88 @@ export default function DashboardLayout() {
             </div>
           )}
         </div>
+
+        {/* Accordion Panels for Transit Planner */}
+        {role === 'Transit Planner' && (
+          <div className="px-4 py-2 border-b border-border space-y-2 shrink-0 bg-secondary/5">
+            {/* Sandbox Card */}
+            <div className="p-2.5 rounded-lg border border-purple-500/20 bg-purple-500/5 space-y-2">
+              <p className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Digital Twin Sandbox</p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <label className="text-[9px] text-muted-foreground block">Footfall Surge</label>
+                  <input type="number" value={footfall} onChange={e => setFootfall(parseInt(e.target.value) || 0)} className="w-full bg-background border border-border rounded px-1.5 py-0.5 text-xs focus:outline-none focus:border-purple-500" />
+                </div>
+                <div>
+                  <label className="text-[9px] text-muted-foreground block">Vehicles Surge</label>
+                  <input type="number" value={vehicles} onChange={e => setVehicles(parseInt(e.target.value) || 0)} className="w-full bg-background border border-border rounded px-1.5 py-0.5 text-xs focus:outline-none focus:border-purple-500" />
+                </div>
+              </div>
+              <button onClick={runSimulation} disabled={isSimulating} className="w-full text-[10px] font-bold py-1 bg-purple-600 hover:bg-purple-500 text-white rounded transition-colors disabled:opacity-50">
+                {isSimulating ? "Simulating..." : "Run Scenario Simulation"}
+              </button>
+              {simulationData && (
+                <div className="p-1.5 bg-black/30 rounded border border-orange-500/20 text-[10px] space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Impact:</span>
+                    <span className="font-bold text-orange-400 capitalize">{simulationData.impact_level}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Spillback Delay:</span>
+                    <span className="font-bold text-orange-400">+{simulationData.predicted_spillback_minutes}m</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Bottlenecks:</span>
+                    <span className="text-orange-300 font-medium">{simulationData.bottleneck_nodes?.length || 0} Nodes</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Transit priority overlay */}
+            <div className="p-2.5 rounded-lg border border-purple-500/20 bg-purple-500/5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Multi-Modal Overlays</span>
+                <input type="checkbox" checked={showBusLanes} onChange={e => toggleBusLanes(e.target.checked)} className="rounded border-border text-purple-600 focus:ring-purple-500 focus:ring-offset-background h-3.5 w-3.5" />
+              </div>
+              <p className="text-[9px] text-muted-foreground">Draw emergency Bus Priority Lanes and calculate BMTC reroutes.</p>
+              {transitData && (
+                <div className="space-y-1 text-[9px] max-h-24 overflow-y-auto">
+                  <p className="font-semibold text-green-400 uppercase tracking-wide">BMTC Dispatch Suggestions:</p>
+                  {transitData.rerouting_suggestions?.map((r: any, idx: number) => (
+                    <div key={idx} className="p-1 bg-green-500/5 rounded border border-green-500/10">
+                      <span className="font-bold text-foreground font-mono">Route {r.route_no}</span>: {r.reroute_via}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Cross-Agency Alternative Data Feeds (Weather & Anomalies) */}
+        {proxyAlerts && (
+          <div className="px-4 py-2.5 border-b border-border shrink-0 bg-secondary/5 space-y-2 max-h-44 overflow-y-auto">
+            <div className="flex items-center justify-between text-[10px] font-bold text-orange-400 uppercase tracking-wider">
+              <span>Alternative Data Feeds</span>
+              <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 lowercase text-[9px] font-normal font-mono">
+                {proxyAlerts.weather?.intensity_mm_hr}mm/h rain
+              </span>
+            </div>
+            <div className="space-y-1.5 text-[10px]">
+              {proxyAlerts.anomalies?.map((anom: any) => (
+                <div key={anom.id} className="p-1.5 rounded border border-border bg-card space-y-0.5">
+                  <div className="flex justify-between items-center text-[9px]">
+                    <span className="text-primary font-semibold uppercase">{anom.source}</span>
+                    <span className="text-muted-foreground">{anom.time}</span>
+                  </div>
+                  <p className="font-semibold text-foreground">{anom.title}</p>
+                  <p className="text-[9px] text-muted-foreground leading-tight">{anom.details}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Stats bar */}
         <div className="grid grid-cols-3 gap-px border-b border-border shrink-0 bg-border">

@@ -7,11 +7,28 @@ import { X, Clock, Users, Cone, Route, Check, AlertTriangle, ShieldCheck } from 
 import { cn } from '@/lib/utils';
 
 export default function AIInspectorDrawer() {
-  const { selectedIncidentId, incidents, selectIncident, predictionData, prescriptiveData, isLoadingPredict, setIncidents } = useIncidentStore();
+  const { 
+    selectedIncidentId, incidents, selectIncident, 
+    predictionData, prescriptiveData, isLoadingPredict, 
+    setIncidents, sopBriefing 
+  } = useIncidentStore();
   const { user } = useAuthStore();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
+  // Ground feedback states
+  const [officersDeployed, setOfficersDeployed] = useState(0);
+  const [barricadesDeployed, setBarricadesDeployed] = useState(0);
+  const [feedbackResult, setFeedbackResult] = useState<any | null>(null);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+
   const incident = incidents.find(i => i.id === selectedIncidentId);
+
+  // Reset feedback state when selected incident changes
+  React.useEffect(() => {
+    setFeedbackResult(null);
+    setOfficersDeployed(0);
+    setBarricadesDeployed(0);
+  }, [selectedIncidentId]);
 
   if (!selectedIncidentId || !incident) return null;
 
@@ -33,6 +50,33 @@ export default function AIInspectorDrawer() {
       console.error('Failed to update status', err);
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.token) return;
+    setIsSubmittingFeedback(true);
+    try {
+      const res = await fetch(`http://localhost:8000/api/incidents/${incident.id}/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          officers_deployed: officersDeployed,
+          barricades_deployed: barricadesDeployed
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFeedbackResult(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmittingFeedback(false);
     }
   };
 
@@ -154,6 +198,26 @@ export default function AIInspectorDrawer() {
               </Card>
             )}
 
+            {/* GenAI SOP Tactical Briefing Card */}
+            {sopBriefing.length > 0 && (
+              <Card className="border-emerald-500/20 bg-emerald-950/5 shadow-[0_0_15px_rgba(16,185,129,0.05)]">
+                <CardHeader className="pb-1">
+                  <CardTitle className="text-xs text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider font-bold">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Llama 3 Tactical Briefing (SOP)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-2">
+                  <ul className="space-y-2 text-xs text-slate-300">
+                    {sopBriefing.map((bullet, idx) => (
+                      <li key={idx} className="bg-emerald-500/5 p-2 rounded border border-emerald-500/10 leading-snug">
+                        {bullet}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Role Specific Control Board */}
             <div className="border-t border-border pt-6 space-y-4">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase">Operational Actions</h3>
@@ -178,7 +242,46 @@ export default function AIInspectorDrawer() {
               )}
 
               {(isCommissioner || isInspector) && (
-                <div className="space-y-3">
+                <div className="space-y-4">
+                  {/* Closed-loop Feedback Form for Ground Personnel */}
+                  {canResolve && (
+                    <form onSubmit={handleSubmitFeedback} className="p-3 bg-blue-500/5 rounded-xl border border-blue-500/15 space-y-3 text-xs">
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-blue-400">Verify Ground Deployment (Feedback Loop)</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[9px] text-muted-foreground">Officers Deployed</label>
+                          <input type="number" value={officersDeployed} onChange={e => setOfficersDeployed(parseInt(e.target.value) || 0)} className="w-full bg-background border border-border rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500" />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-muted-foreground">Barricades Deployed</label>
+                          <input type="number" value={barricadesDeployed} onChange={e => setBarricadesDeployed(parseInt(e.target.value) || 0)} className="w-full bg-background border border-border rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500" />
+                        </div>
+                      </div>
+                      <button type="submit" disabled={isSubmittingFeedback} className="w-full font-semibold py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors disabled:opacity-50">
+                        {isSubmittingFeedback ? "Updating..." : "Submit Deploy Verification"}
+                      </button>
+
+                      {feedbackResult && (
+                        <div className="p-2 bg-black/40 rounded border border-blue-500/20 text-[10px] space-y-1.5 animate-fadeIn">
+                          <div className="flex justify-between items-center">
+                            <span>Sector Speed Drop:</span>
+                            <span className={cn("font-bold font-mono", feedbackResult.speed_drop_kmh > 10 ? "text-red-400" : "text-green-400")}>
+                              -{feedbackResult.speed_drop_kmh} km/h
+                            </span>
+                          </div>
+                          {feedbackResult.escalated && (
+                            <div className="flex items-center gap-1 text-[9px] text-red-400 font-bold uppercase live-pulse">
+                              <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> Speed drop threshold exceeded!
+                            </div>
+                          )}
+                          <div className="text-[9px] text-slate-300 border-t border-border pt-1">
+                            <span className="font-semibold text-blue-300">Rec. Detour:</span> {feedbackResult.recommended_detour}
+                          </div>
+                        </div>
+                      )}
+                    </form>
+                  )}
+
                   {canResolve ? (
                     incident.status === 'active' ? (
                       <button

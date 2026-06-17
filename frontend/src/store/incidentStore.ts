@@ -36,9 +36,17 @@ interface IncidentState {
   predictionData: Prediction | null;
   prescriptiveData: Prescriptive | null;
   isLoadingPredict: boolean;
+  proxyAlerts: any | null;
+  simulationData: any | null;
+  transitData: any | null;
+  sopBriefing: string[];
   setIncidents: (incidents: Incident[]) => void;
   selectIncident: (id: string | null) => void;
   fetchAIInsights: (id: string) => Promise<void>;
+  setProxyAlerts: (alerts: any) => void;
+  setSimulationData: (data: any) => void;
+  setTransitData: (data: any) => void;
+  fetchSopBriefing: (id: string) => Promise<void>;
 }
 
 import { useAuthStore } from './authStore';
@@ -49,15 +57,40 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
   predictionData: null,
   prescriptiveData: null,
   isLoadingPredict: false,
+  proxyAlerts: null,
+  simulationData: null,
+  transitData: null,
+  sopBriefing: [],
   
   setIncidents: (incidents) => set({ incidents }),
+  
+  setProxyAlerts: (proxyAlerts) => set({ proxyAlerts }),
+  setSimulationData: (simulationData) => set({ simulationData }),
+  setTransitData: (transitData) => set({ transitData }),
   
   selectIncident: (id) => {
     set({ selectedIncidentId: id });
     if (id) {
       get().fetchAIInsights(id);
+      get().fetchSopBriefing(id);
     } else {
-      set({ predictionData: null, prescriptiveData: null });
+      set({ predictionData: null, prescriptiveData: null, sopBriefing: [] });
+    }
+  },
+  
+  fetchSopBriefing: async (id: string) => {
+    try {
+      const token = useAuthStore.getState().user?.token;
+      if (!token) return;
+      const res = await fetch(`http://localhost:8000/api/incidents/${id}/sop`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        set({ sopBriefing: data.briefing });
+      }
+    } catch (err) {
+      console.error(err);
     }
   },
   

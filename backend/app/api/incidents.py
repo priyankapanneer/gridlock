@@ -42,3 +42,61 @@ async def update_incident_status(incident_id: str, status: str, db: Session = De
     db.commit()
     db.refresh(db_incident)
     return db_incident
+
+from pydantic import BaseModel
+
+class FeedbackRequest(BaseModel):
+    officers_deployed: int
+    barricades_deployed: int
+
+class FeedbackResponse(BaseModel):
+    speed_drop_kmh: int
+    escalated: bool
+    recommended_detour: str
+
+@router.get("/proxy-alerts")
+async def get_proxy_alerts(current_user: TokenData = Depends(get_current_user)):
+    return {
+        "weather": {
+            "condition": "Heavy Rain",
+            "intensity_mm_hr": 24.5,
+            "impact": "Waterlogging warning at Silk Board & Wind Tunnel Road"
+        },
+        "anomalies": [
+            {
+                "id": "anom-1",
+                "source": "Google Maps Speed Index",
+                "title": "Severe Delay: Outer Ring Road Northbound",
+                "details": "+18m traffic delay spike detected near Marathahalli flyover",
+                "time": "5m ago"
+            },
+            {
+                "id": "anom-2",
+                "source": "Social Scraping (Telegram)",
+                "title": "VIP Movement / Rally Alert",
+                "details": "Telegram traffic group flags assembly forming near Cubbon Park gate",
+                "time": "12m ago"
+            }
+        ]
+    }
+
+@router.post("/{incident_id}/feedback", response_model=FeedbackResponse)
+async def report_resource_deployment(incident_id: str, req: FeedbackRequest, db: Session = Depends(get_db), current_user: TokenData = Depends(get_current_user)):
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+        
+    # Simulate a speed drop metric: if fewer resources deployed than standard
+    # or just simulate speed drop feedback loop.
+    speed_drop = 18 if req.barricades_deployed < 10 else 6
+    escalated = req.barricades_deployed < 8
+    
+    detour = "Standard Level 1 detour via corridor service road"
+    if escalated:
+        detour = "Level 2 detour activated: Route heavy traffic via outer circumferential bypass"
+        
+    return FeedbackResponse(
+        speed_drop_kmh=speed_drop,
+        escalated=escalated,
+        recommended_detour=detour
+    )

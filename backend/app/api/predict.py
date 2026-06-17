@@ -43,13 +43,13 @@ async def predict_clearance_time(incident_id: str, db: Session = Depends(get_db)
             'day_of_week': incident.start_datetime.weekday() if incident.start_datetime else 0
         }])
         pred = ml_model.predict(df)[0]
-        base_time = float(pred)
+        base_time = max(10.0, float(pred))
         shap_values = {
             "ml_prediction_base": base_time * 0.8,
             "spatial_features": base_time * 0.1,
             "temporal_features": base_time * 0.1
         }
-        return PredictionResponse(eta_minutes=max(1.0, round(base_time, 1)), shap_values=shap_values)
+        return PredictionResponse(eta_minutes=round(base_time, 1), shap_values=shap_values)
 
     # Fallback mathematical stub if model is missing
     base_time = 30.0 # Base 30 minutes
@@ -131,3 +131,27 @@ async def get_vulnerability_clusters(db: Session = Depends(get_db)):
         })
 
     return {"clusters": result}
+
+from pydantic import BaseModel
+
+class SopResponse(BaseModel):
+    briefing: List[str]
+
+@router.get("/incidents/{incident_id}/sop", response_model=SopResponse)
+async def get_incident_sop_briefing(incident_id: str, db: Session = Depends(get_db), current_user: TokenData = Depends(get_current_user)):
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+        
+    cause = incident.event_cause or "unplanned event"
+    address = incident.address or "local junction"
+    
+    # Calculate resources
+    barricades = 15 if incident.requires_road_closure else 5
+    officers = 6 if incident.priority == "High" else 2
+    
+    bullet_1 = f"⚠️ Action Plan: Heavy congestion predicted at {address}. Initiate traffic management guidelines for {cause}."
+    bullet_2 = f"🚧 Resource Allocation: Deploy {officers} officers and set up {barricades} barricades immediately around {incident.police_station or 'incident corridor'} sector."
+    bullet_3 = f"🧭 Traffic Flow: Activate Level 1 local service road detours and notify nearby division command centers."
+    
+    return SopResponse(briefing=[bullet_1, bullet_2, bullet_3])
