@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from typing import List
+import io
+import csv
 from app.database import get_db, Incident, apply_rls_filter
 from app.models import IncidentResponse, IncidentCreate, TokenData
 from app.core.security import get_current_user
@@ -99,4 +101,35 @@ async def report_resource_deployment(incident_id: str, req: FeedbackRequest, db:
         speed_drop_kmh=speed_drop,
         escalated=escalated,
         recommended_detour=detour
+    )
+
+@router.get("/export/csv")
+async def export_incidents_csv(db: Session = Depends(get_db), current_user: TokenData = Depends(get_current_user)):
+    query = db.query(Incident)
+    query = apply_rls_filter(query, current_user.role, current_user.police_station)
+    incidents = query.all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header row
+    writer.writerow([
+        "ID", "Description", "Status", "Priority", "Latitude", "Longitude",
+        "Corridor", "Zone", "Event Type", "Event Cause", "Veh Type",
+        "Requires Road Closure", "Police Station", "Start Datetime"
+    ])
+    
+    for inc in incidents:
+        writer.writerow([
+            inc.id, inc.description, inc.status, inc.priority, inc.latitude, inc.longitude,
+            inc.corridor, inc.zone, inc.event_type, inc.event_cause, inc.veh_type,
+            "Yes" if inc.requires_road_closure else "No", inc.police_station,
+            inc.start_datetime
+        ])
+    
+    output.seek(0)
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=incident_logs.csv"}
     )

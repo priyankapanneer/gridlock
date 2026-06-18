@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore, type Role } from '@/store/authStore';
 import { useIncidentStore } from '@/store/incidentStore';
-import { Shield, Activity, Database, ChevronDown, LogOut, User, RefreshCw, CheckCircle } from 'lucide-react';
+import { Shield, Activity, Database, ChevronDown, LogOut, User, RefreshCw, CheckCircle, Download } from 'lucide-react';
 import MapWorkspace from './MapWorkspace';
 import IncidentTelemetry from './IncidentTelemetry';
 import AIInspectorDrawer from './AIInspectorDrawer';
@@ -46,7 +46,7 @@ export default function DashboardLayout() {
     if (!user?.token) return;
     setIsRefreshing(true);
     try {
-      const res = await fetch('http://localhost:8000/api/incidents', {
+      const res = await fetch('http://localhost:8080/api/incidents', {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       const data = await res.json();
@@ -64,7 +64,7 @@ export default function DashboardLayout() {
   const fetchProxyAlerts = async () => {
     if (!user?.token) return;
     try {
-      const res = await fetch('http://localhost:8000/api/proxy-alerts', {
+      const res = await fetch('http://localhost:8080/api/proxy-alerts', {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       if (res.ok) {
@@ -88,7 +88,7 @@ export default function DashboardLayout() {
         [77.5990, 12.9780]
       ];
       
-      const res = await fetch('http://localhost:8000/api/simulate', {
+      const res = await fetch('http://localhost:8080/api/simulate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -120,7 +120,7 @@ export default function DashboardLayout() {
     }
     if (!user?.token) return;
     try {
-      const res = await fetch('http://localhost:8000/api/transit/multi-modal', {
+      const res = await fetch('http://localhost:8080/api/transit/multi-modal', {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       if (res.ok) {
@@ -137,7 +137,7 @@ export default function DashboardLayout() {
     if (!user?.token) return;
     try {
       const station = targetRole === 'Field Inspector' ? (targetPS || user?.police_station || 'HAL Old Airport') : null;
-      const res = await fetch('http://localhost:8000/api/auth/switch-role', {
+      const res = await fetch('http://localhost:8080/api/auth/switch-role', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -159,6 +159,29 @@ export default function DashboardLayout() {
       }
     } catch (err) {
       console.error('Failed to switch role', err);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    if (!user?.token) return;
+    try {
+      const res = await fetch('http://localhost:8080/api/incidents/export/csv', {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `incident_logs_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        console.error('Failed to export CSV');
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -375,11 +398,18 @@ export default function DashboardLayout() {
         {/* Header row for telemetry list */}
         <div className="px-4 py-2.5 flex items-center justify-between shrink-0">
           <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Live Telemetry</span>
-          <button onClick={fetchIncidents} disabled={isRefreshing}
-            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors disabled:opacity-50">
-            <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={handleExportCSV} title="Export Active Logs (Excel/CSV)"
+              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-green-400 transition-colors">
+              <Download className="w-3 h-3" />
+              <span>Export CSV</span>
+            </button>
+            <button onClick={fetchIncidents} disabled={isRefreshing}
+              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors disabled:opacity-50">
+              <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </button>
+          </div>
         </div>
 
         {/* Incident list */}

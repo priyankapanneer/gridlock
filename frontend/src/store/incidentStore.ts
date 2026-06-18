@@ -82,7 +82,7 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
     try {
       const token = useAuthStore.getState().user?.token;
       if (!token) return;
-      const res = await fetch(`http://localhost:8000/api/incidents/${id}/sop`, {
+      const res = await fetch(`http://localhost:8080/api/incidents/${id}/sop`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -101,8 +101,8 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
       const headers = { 'Authorization': `Bearer ${token}` };
 
       const [predRes, presRes] = await Promise.all([
-        fetch(`http://localhost:8000/api/${id}/predict`, { headers }),
-        fetch(`http://localhost:8000/api/${id}/optimize`, { headers })
+        fetch(`http://localhost:8080/api/${id}/predict`, { headers }),
+        fetch(`http://localhost:8080/api/${id}/optimize`, { headers })
       ]);
       
       if (predRes.ok && presRes.ok) {

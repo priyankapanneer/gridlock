@@ -3,7 +3,7 @@ import { useIncidentStore } from '@/store/incidentStore';
 import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { X, Clock, Users, Cone, Route, Check, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { X, Clock, Users, Cone, Route, Check, AlertTriangle, ShieldCheck, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function AIInspectorDrawer() {
@@ -36,7 +36,7 @@ export default function AIInspectorDrawer() {
     if (!user?.token) return;
     setIsUpdatingStatus(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/incidents/${incident.id}/status?status=${newStatus}`, {
+      const res = await fetch(`http://localhost:8080/api/incidents/${incident.id}/status?status=${newStatus}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${user.token}`
@@ -58,7 +58,7 @@ export default function AIInspectorDrawer() {
     if (!user?.token) return;
     setIsSubmittingFeedback(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/incidents/${incident.id}/feedback`, {
+      const res = await fetch(`http://localhost:8080/api/incidents/${incident.id}/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -88,15 +88,20 @@ export default function AIInspectorDrawer() {
   const canResolve = isCommissioner || (isInspector && incident.police_station === user?.police_station);
 
   return (
-    <div className="w-96 border-l border-border bg-card shadow-2xl flex flex-col z-30 transition-transform duration-300">
+    <div className="w-96 border-l border-border bg-card shadow-2xl flex flex-col z-30 transition-transform duration-300 print-area">
       <div className="p-4 border-b border-border flex justify-between items-center sticky top-0 bg-card z-10">
         <div>
           <h2 className="font-bold">AI Inspector</h2>
           <p className="text-xs text-muted-foreground">{incident.id}</p>
         </div>
-        <button onClick={() => selectIncident(null)} className="p-1 hover:bg-muted rounded-full">
-          <X className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2 no-print">
+          <button onClick={() => window.print()} title="Print Briefing / Save PDF" className="p-1.5 hover:bg-muted rounded-full">
+            <Printer className="w-4 h-4" />
+          </button>
+          <button onClick={() => selectIncident(null)} className="p-1 hover:bg-muted rounded-full">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -242,7 +247,7 @@ export default function AIInspectorDrawer() {
               )}
 
               {(isCommissioner || isInspector) && (
-                <div className="space-y-4">
+                <div className="space-y-4 no-print">
                   {/* Closed-loop Feedback Form for Ground Personnel */}
                   {canResolve && (
                     <form onSubmit={handleSubmitFeedback} className="p-3 bg-blue-500/5 rounded-xl border border-blue-500/15 space-y-3 text-xs">

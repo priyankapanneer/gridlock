@@ -10,7 +10,7 @@ if (-not (Test-Path venv)) {
 }
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-Start-Process powershell -ArgumentList "-NoExit -Command `"cd d:\gridlock\backend; .\venv\Scripts\Activate.ps1; uvicorn app.main:app --reload`""
+Start-Process powershell -ArgumentList "-NoExit -Command `"cd d:\gridlock\backend; .\venv\Scripts\Activate.ps1; uvicorn app.main:app --reload --port 8080`""
 
 # Start Frontend
 Write-Host "Setting up Vite Frontend..." -ForegroundColor Cyan
