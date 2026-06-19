@@ -133,10 +133,27 @@
   background-clip: text;
 }
 
-/* Input focus glow */
-input:focus, select:focus {
-  box-shadow: 0 0 0 2px hsl(199 89% 56% / 0.3) !important;
+/* Recessed Inputs & Focus Glows */
+.input-recessed {
+  background: rgba(10, 15, 26, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
+.input-recessed:focus {
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6), 0 0 10px rgba(56, 189, 248, 0.15) !important;
+}
+
+/* Semi-transparent Glass Panel styling */
+.glass-panel {
+  background: rgba(14, 22, 38, 0.45) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
 /* Print styles for PDF/Briefing reports */
 @media print {
   body {

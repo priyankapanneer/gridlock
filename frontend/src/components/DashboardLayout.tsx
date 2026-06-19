@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore, type Role } from '@/store/authStore';
 import { useIncidentStore } from '@/store/incidentStore';
-import { Shield, Activity, Database, ChevronDown, LogOut, User, RefreshCw, CheckCircle, Download } from 'lucide-react';
+import { Shield, Activity, Database, ChevronDown, LogOut, User, RefreshCw, CheckCircle, Download, Bus, Compass } from 'lucide-react';
 import MapWorkspace from './MapWorkspace';
 import IncidentTelemetry from './IncidentTelemetry';
 import AIInspectorDrawer from './AIInspectorDrawer';
@@ -80,7 +80,6 @@ export default function DashboardLayout() {
     if (!user?.token) return;
     setIsSimulating(true);
     try {
-      // Mock event polygon vertices around Chinnaswamy Stadium / central Bengaluru
       const coords = [
         [77.5960, 12.9870],
         [77.6010, 12.9920],
@@ -152,7 +151,6 @@ export default function DashboardLayout() {
       if (res.ok) {
         const data = await res.json();
         switchRole(targetRole, station, data.access_token);
-        // Clear any simulator state when switching roles
         setSimulationData(null);
         setTransitData(null);
         setShowBusLanes(false);
@@ -194,263 +192,228 @@ export default function DashboardLayout() {
   const role = user?.role ?? 'Field Inspector';
 
   return (
-    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="relative w-screen h-screen bg-[#070b13] text-foreground overflow-hidden font-sans">
+      {/* ── Background Map Viewport ── */}
+      <div className="absolute inset-0 z-10">
+        <MapWorkspace />
+      </div>
 
-      {/* ── Left Sidebar ── */}
-      <aside className="w-80 flex flex-col z-10 border-r border-border" style={{ background: 'hsl(var(--sidebar-bg, 222 47% 6%))' }}>
-
-        {/* Brand header */}
-        <div className="px-5 py-4 border-b border-border flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-primary" />
-            </div>
-            <div>
-              <h1 className="font-bold text-base tracking-widest gradient-text">RESILIO</h1>
-              <p className="text-[9px] text-muted-foreground uppercase tracking-widest">Command System</p>
-            </div>
-          </div>
-
-          {/* User menu */}
-          <div className="relative">
-            <button
-              onClick={() => { setShowUserMenu(v => !v); setShowRoleMenu(false); }}
-              className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center hover:bg-primary/20 transition-colors"
-            >
-              <User className="w-4 h-4 text-primary" />
-            </button>
-            {showUserMenu && (
-              <div className="absolute right-0 top-10 w-52 glass rounded-xl shadow-2xl border border-border z-50 py-2 overflow-hidden">
-                <div className="px-3 py-2 border-b border-border">
-                  <p className="text-xs font-semibold">{user?.username}</p>
-                  <p className="text-[10px] text-muted-foreground">{user?.email}</p>
-                </div>
-                <button onClick={() => { logout(); setShowUserMenu(false); }}
-                  className="w-full text-left px-3 py-2 text-xs text-destructive hover:bg-destructive/10 flex items-center gap-2 transition-colors">
-                  <LogOut className="w-3 h-3" /> Sign Out
+      {/* ── Top-Left Header Control Pill ── */}
+      <div className="absolute top-4 left-4 z-20 flex items-center gap-3.5 glass-panel px-4 py-2 rounded-xl border border-white/8 shadow-lg pointer-events-auto">
+        <div className="flex items-center gap-2">
+          <Shield className="w-4 h-4 text-primary shrink-0" />
+          <span className="font-bold text-sm tracking-widest gradient-text">RESILIO</span>
+        </div>
+        <div className="w-[1px] h-5 bg-white/10" />
+        
+        {/* Role Selector */}
+        <div className="relative">
+          <button
+            onClick={() => { setShowRoleMenu(v => !v); setShowUserMenu(false); }}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-white/8 text-[11px] font-medium transition-all hover:bg-white/5 ${ROLE_COLORS[role]}`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full live-pulse ${ROLE_DOTS[role]}`} />
+            <span>{role}</span>
+            <ChevronDown className="w-3 h-3 text-white/50" />
+          </button>
+          {showRoleMenu && (
+            <div className="absolute top-8 left-0 w-44 glass-panel rounded-lg border border-white/8 shadow-2xl py-1 overflow-hidden z-50">
+              {ROLES.map(r => (
+                <button key={r} onClick={() => handleSwitchRole(r)}
+                  className={`w-full text-left px-3 py-1.5 text-[11px] flex items-center justify-between hover:bg-white/5 transition-colors ${r === role ? 'text-primary' : 'text-muted-foreground'}`}>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`w-1.5 h-1.5 rounded-full ${ROLE_DOTS[r]}`} />
+                    {r}
+                  </div>
+                  {r === role && <CheckCircle className="w-3 h-3 text-primary" />}
                 </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Role Switcher */}
-        <div className="px-4 py-3 border-b border-border shrink-0">
-          <p className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1.5">Active Role</p>
-          <div className="relative">
-            <button
-              onClick={() => { setShowRoleMenu(v => !v); setShowUserMenu(false); }}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-medium transition-all hover:opacity-90 ${ROLE_COLORS[role]}`}
-            >
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full live-pulse ${ROLE_DOTS[role]}`} />
-                {role}
-              </div>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showRoleMenu ? 'rotate-180' : ''}`} />
-            </button>
-
-            {showRoleMenu && (
-              <div className="absolute top-10 left-0 right-0 glass rounded-xl border border-border shadow-2xl z-50 py-1 overflow-hidden">
-                {ROLES.map(r => (
-                  <button key={r} onClick={() => handleSwitchRole(r)}
-                    className={`w-full text-left px-3 py-2.5 text-xs flex items-center justify-between hover:bg-muted transition-colors ${r === role ? 'text-primary' : 'text-muted-foreground'}`}>
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${ROLE_DOTS[r]}`} />
-                      {r}
-                    </div>
-                    {r === role && <CheckCircle className="w-3 h-3 text-primary" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Role-Specific Operation Widget */}
-        <div className="px-4 py-3 border-b border-border shrink-0 bg-secondary/10">
-          {role === 'Field Inspector' && (
-            <div className="p-3 rounded-lg border border-green-500/20 bg-green-500/5">
-              <p className="text-[9px] text-green-400 font-bold uppercase tracking-widest mb-1">Inspector Jurisdiction</p>
-              <select
-                value={user?.police_station || 'HAL Old Airport'}
-                onChange={e => handleSwitchRole('Field Inspector', e.target.value)}
-                className="w-full mt-1.5 bg-[#0b0f19] border border-green-500/30 rounded px-2 py-1.5 text-xs text-green-300 font-semibold focus:outline-none focus:border-green-500"
-              >
-                {['Yelahanka', 'HAL Old Airport', 'Sadashivanagar', 'Halasuru Gate', 'Byatarayanapura', 'Yeshwanthpura', 'Hennuru', 'Kodigehalli', 'Banaswadi', 'K.R. Pura'].map(ps => (
-                  <option key={ps} value={ps}>{ps} PS Division</option>
-                ))}
-              </select>
-              <p className="text-[9px] text-muted-foreground mt-1.5">Telemetry and clearance controls are locked to this division.</p>
-            </div>
-          )}
-          {role === 'Command Commissioner' && (
-            <div className="p-3 rounded-lg border border-blue-500/20 bg-blue-500/5">
-              <p className="text-[9px] text-blue-400 font-bold uppercase tracking-widest mb-1">Commissioner Dashboard</p>
-              <p className="text-xs font-semibold text-foreground">Global dispatch command</p>
-              <p className="text-[10px] text-muted-foreground mt-1">Full global overview of all active sectors with incident override controls.</p>
-            </div>
-          )}
-          {role === 'Transit Planner' && (
-            <div className="p-3 rounded-lg border border-purple-500/20 bg-purple-500/5">
-              <p className="text-[9px] text-purple-400 font-bold uppercase tracking-widest mb-1">Transit Analytics Control</p>
-              <p className="text-xs font-semibold text-foreground">Traffic Optimization System</p>
-              <p className="text-[10px] text-muted-foreground mt-1">Accessing LightGBM prediction pipelines and adaptive routing suggestions.</p>
-            </div>
-          )}
-        </div>
-
-        {/* Accordion Panels for Transit Planner */}
-        {role === 'Transit Planner' && (
-          <div className="px-4 py-2 border-b border-border space-y-2 shrink-0 bg-secondary/5">
-            {/* Sandbox Card */}
-            <div className="p-2.5 rounded-lg border border-purple-500/20 bg-purple-500/5 space-y-2">
-              <p className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Digital Twin Sandbox</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <label className="text-[9px] text-muted-foreground block">Footfall Surge</label>
-                  <input type="number" value={footfall} onChange={e => setFootfall(parseInt(e.target.value) || 0)} className="w-full bg-background border border-border rounded px-1.5 py-0.5 text-xs focus:outline-none focus:border-purple-500" />
-                </div>
-                <div>
-                  <label className="text-[9px] text-muted-foreground block">Vehicles Surge</label>
-                  <input type="number" value={vehicles} onChange={e => setVehicles(parseInt(e.target.value) || 0)} className="w-full bg-background border border-border rounded px-1.5 py-0.5 text-xs focus:outline-none focus:border-purple-500" />
-                </div>
-              </div>
-              <button onClick={runSimulation} disabled={isSimulating} className="w-full text-[10px] font-bold py-1 bg-purple-600 hover:bg-purple-500 text-white rounded transition-colors disabled:opacity-50">
-                {isSimulating ? "Simulating..." : "Run Scenario Simulation"}
-              </button>
-              {simulationData && (
-                <div className="p-1.5 bg-black/30 rounded border border-orange-500/20 text-[10px] space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Impact:</span>
-                    <span className="font-bold text-orange-400 capitalize">{simulationData.impact_level}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Spillback Delay:</span>
-                    <span className="font-bold text-orange-400">+{simulationData.predicted_spillback_minutes}m</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Bottlenecks:</span>
-                    <span className="text-orange-300 font-medium">{simulationData.bottleneck_nodes?.length || 0} Nodes</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Transit priority overlay */}
-            <div className="p-2.5 rounded-lg border border-purple-500/20 bg-purple-500/5 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Multi-Modal Overlays</span>
-                <input type="checkbox" checked={showBusLanes} onChange={e => toggleBusLanes(e.target.checked)} className="rounded border-border text-purple-600 focus:ring-purple-500 focus:ring-offset-background h-3.5 w-3.5" />
-              </div>
-              <p className="text-[9px] text-muted-foreground">Draw emergency Bus Priority Lanes and calculate BMTC reroutes.</p>
-              {transitData && (
-                <div className="space-y-1 text-[9px] max-h-24 overflow-y-auto">
-                  <p className="font-semibold text-green-400 uppercase tracking-wide">BMTC Dispatch Suggestions:</p>
-                  {transitData.rerouting_suggestions?.map((r: any, idx: number) => (
-                    <div key={idx} className="p-1 bg-green-500/5 rounded border border-green-500/10">
-                      <span className="font-bold text-foreground font-mono">Route {r.route_no}</span>: {r.reroute_via}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Cross-Agency Alternative Data Feeds (Weather & Anomalies) */}
-        {proxyAlerts && (
-          <div className="px-4 py-2.5 border-b border-border shrink-0 bg-secondary/5 space-y-2 max-h-44 overflow-y-auto">
-            <div className="flex items-center justify-between text-[10px] font-bold text-orange-400 uppercase tracking-wider">
-              <span>Alternative Data Feeds</span>
-              <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 lowercase text-[9px] font-normal font-mono">
-                {proxyAlerts.weather?.intensity_mm_hr}mm/h rain
-              </span>
-            </div>
-            <div className="space-y-1.5 text-[10px]">
-              {proxyAlerts.anomalies?.map((anom: any) => (
-                <div key={anom.id} className="p-1.5 rounded border border-border bg-card space-y-0.5">
-                  <div className="flex justify-between items-center text-[9px]">
-                    <span className="text-primary font-semibold uppercase">{anom.source}</span>
-                    <span className="text-muted-foreground">{anom.time}</span>
-                  </div>
-                  <p className="font-semibold text-foreground">{anom.title}</p>
-                  <p className="text-[9px] text-muted-foreground leading-tight">{anom.details}</p>
-                </div>
               ))}
             </div>
-          </div>
+          )}
+        </div>
+
+        {/* Jurisdiction dropdown */}
+        {role === 'Field Inspector' && (
+          <>
+            <div className="w-[1px] h-5 bg-white/10" />
+            <select
+              value={user?.police_station || 'HAL Old Airport'}
+              onChange={e => handleSwitchRole('Field Inspector', e.target.value)}
+              className="bg-[#0b0f19]/80 border border-green-500/30 rounded-lg px-2 py-1 text-[11px] text-green-300 font-medium focus:outline-none"
+            >
+              {['Yelahanka', 'HAL Old Airport', 'Sadashivanagar', 'Halasuru Gate', 'Byatarayanapura', 'Yeshwanthpura', 'Hennuru', 'Kodigehalli', 'Banaswadi', 'K.R. Pura'].map(ps => (
+                <option key={ps} value={ps}>{ps} PS</option>
+              ))}
+            </select>
+          </>
         )}
 
-        {/* Stats bar */}
-        <div className="grid grid-cols-3 gap-px border-b border-border shrink-0 bg-border">
-          {[
-            { label: 'Total', value: incidents.length, color: 'text-foreground' },
-            { label: 'Critical', value: highCount, color: 'text-destructive' },
-            { label: 'Zones', value: new Set(incidents.map(i => i.zone)).size, color: 'text-primary' }
-          ].map(stat => (
-            <div key={stat.label} className="bg-card flex flex-col items-center justify-center py-3">
-              <span className={`text-lg font-bold tabular-nums ${stat.color}`}>{stat.value}</span>
-              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">{stat.label}</span>
-            </div>
-          ))}
-        </div>
+        <div className="w-[1px] h-5 bg-white/10" />
 
-        {/* Header row for telemetry list */}
-        <div className="px-4 py-2.5 flex items-center justify-between shrink-0">
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Live Telemetry</span>
-          <div className="flex items-center gap-3">
-            <button onClick={handleExportCSV} title="Export Active Logs (Excel/CSV)"
-              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-green-400 transition-colors">
+        {/* User profile */}
+        <div className="relative">
+          <button
+            onClick={() => { setShowUserMenu(v => !v); setShowRoleMenu(false); }}
+            className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
+          >
+            <User className="w-3 h-3 text-white/70" />
+          </button>
+          {showUserMenu && (
+            <div className="absolute right-0 top-8 w-44 glass-panel rounded-lg shadow-2xl border border-white/8 py-1.5 overflow-hidden z-50">
+              <div className="px-3 py-1.5 border-b border-white/5">
+                <p className="text-[10px] font-semibold text-white/90">{user?.username}</p>
+                <p className="text-[9px] text-white/40">{user?.email}</p>
+              </div>
+              <button onClick={() => { logout(); setShowUserMenu(false); }}
+                className="w-full text-left px-3 py-1.5 text-[10px] text-destructive hover:bg-destructive/10 flex items-center gap-1.5 transition-colors">
+                <LogOut className="w-3 h-3" /> Sign Out
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Top-Right Global Metrics ── */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-6 glass-panel px-5 py-2.5 rounded-xl border border-white/8 shadow-lg pointer-events-auto">
+        <div className="flex flex-col items-end">
+          <span className="text-[9px] text-white/40 uppercase tracking-widest font-mono font-semibold">Active Incidents</span>
+          <span className="text-sm font-bold text-white tabular-nums">{incidents.length}</span>
+        </div>
+        <div className="w-[1px] h-6 bg-white/10" />
+        <div className="flex flex-col items-end">
+          <span className="text-[9px] text-white/40 uppercase tracking-widest font-mono font-semibold">Critical Priority</span>
+          <span className="text-sm font-bold text-destructive/90 tabular-nums">{highCount}</span>
+        </div>
+      </div>
+
+      {/* ── Left-Side Telemetry Strip ── */}
+      <aside className="absolute left-4 top-20 bottom-52 w-80 z-20 flex flex-col rounded-2xl glass-panel shadow-2xl border border-white/8 overflow-hidden no-print pointer-events-auto">
+        <div className="px-4 py-3 flex items-center justify-between shrink-0 border-b border-white/8 bg-[#09090b]/40">
+          <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest font-mono">Live Telemetry</span>
+          <div className="flex items-center gap-2">
+            <button onClick={handleExportCSV} title="Export Logs"
+              className="flex items-center gap-1 text-[9px] text-white/40 hover:text-green-400 transition-colors">
               <Download className="w-3 h-3" />
-              <span>Export CSV</span>
+              <span>CSV</span>
             </button>
             <button onClick={fetchIncidents} disabled={isRefreshing}
-              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors disabled:opacity-50">
+              className="flex items-center gap-1 text-[9px] text-white/40 hover:text-primary transition-colors disabled:opacity-50">
               <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </button>
           </div>
         </div>
-
-        {/* Incident list */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto bg-transparent">
           <IncidentTelemetry incidents={incidents} />
         </div>
       </aside>
 
-      {/* ── Center Map ── */}
-      <div className="flex-1 relative">
-        {/* Floating top badges */}
-        <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
-          <div className="glass flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-green-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 live-pulse" />
-            <Activity className="w-3 h-3 text-green-400" />
-            <span className="text-[10px] font-medium text-green-400">System Optimal</span>
+      {/* ── Bottom-Left Digital Twin / Coverage Area Group ── */}
+      <div className="absolute left-4 bottom-4 w-80 z-20 flex flex-col gap-2.5 no-print pointer-events-auto">
+        <div className="glass-panel px-3.5 py-2.5 rounded-xl border border-white/8 shadow-xl">
+          <p className="text-[9px] text-white/40 uppercase tracking-widest font-mono font-semibold">Operational Coverage</p>
+          <p className="text-xs font-bold text-foreground">Bengaluru, Karnataka</p>
+        </div>
+
+        {/* Digital Twin Sandbox (Planner only) */}
+        {role === 'Transit Planner' && (
+          <div className="glass-panel border border-white/8 rounded-xl p-3.5 space-y-3 shadow-2xl">
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-purple-400 live-pulse" />
+              <p className="text-[10px] font-bold text-purple-400 uppercase tracking-wider font-mono">Digital Twin Sandbox</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 text-[10px]">
+              <div>
+                <label className="text-[8px] text-white/40 block mb-0.5 uppercase tracking-wider font-mono">Footfall Surge</label>
+                <input type="number" value={footfall} onChange={e => setFootfall(parseInt(e.target.value) || 0)} className="w-full input-recessed rounded-lg px-2 py-1 text-[11px] focus:outline-none" />
+              </div>
+              <div>
+                <label className="text-[8px] text-white/40 block mb-0.5 uppercase tracking-wider font-mono">Vehicles Surge</label>
+                <input type="number" value={vehicles} onChange={e => setVehicles(parseInt(e.target.value) || 0)} className="w-full input-recessed rounded-lg px-2 py-1 text-[11px] focus:outline-none" />
+              </div>
+            </div>
+
+            <button onClick={runSimulation} disabled={isSimulating} className="w-full text-[9px] font-bold py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors uppercase tracking-wider disabled:opacity-50">
+              {isSimulating ? "Simulating..." : "Run Scenario Simulation"}
+            </button>
+
+            {simulationData && (
+              <div className="p-2 bg-black/40 rounded-lg border border-orange-500/20 text-[9px] space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-white/40">Sandbox Impact:</span>
+                  <span className="font-bold text-orange-400 capitalize">{simulationData.impact_level}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/40">Predicted Delay:</span>
+                  <span className="font-bold text-orange-400">+{simulationData.predicted_spillback_minutes}m</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/40">Bottleneck Intersections:</span>
+                  <span className="text-orange-300 font-bold">{simulationData.bottleneck_nodes?.length || 0} Nodes</span>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="glass flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/20">
-            <Database className="w-3 h-3 text-primary" />
-            <span className="text-[10px] font-medium text-primary">GPU Accelerated</span>
+        )}
+      </div>
+
+      {/* ── Flagship Horizon Bottom Dock ── */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[700px] z-20 glass-panel rounded-2xl border border-white/8 p-4 flex flex-col gap-3.5 shadow-2xl pointer-events-auto no-print">
+        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <Compass className="w-3.5 h-3.5 text-emerald-400 animate-spin-slow" />
+            </div>
+            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider font-mono">
+              Dynamic Transit Priority Routing Optimization Deck
+            </span>
           </div>
-          {highCount > 0 && (
-            <div className="glass flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-destructive/30 glow-red">
-              <span className="w-1.5 h-1.5 rounded-full bg-destructive live-pulse" />
-              <span className="text-[10px] font-medium text-destructive">{highCount} Critical</span>
+          
+          {role === 'Transit Planner' && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8px] text-white/40 uppercase tracking-wider font-mono">Priority Overlay</span>
+              <input 
+                type="checkbox" 
+                checked={showBusLanes} 
+                onChange={e => toggleBusLanes(e.target.checked)} 
+                className="rounded border-white/10 text-emerald-500 focus:ring-emerald-500 bg-background h-3.5 w-3.5" 
+              />
             </div>
           )}
         </div>
 
-        {/* Bengaluru label */}
-        <div className="absolute bottom-8 left-4 z-20">
-          <div className="glass px-3 py-1.5 rounded-lg border border-border">
-            <p className="text-[9px] text-muted-foreground uppercase tracking-widest">Coverage Area</p>
-            <p className="text-xs font-semibold text-foreground">Bengaluru, Karnataka</p>
-          </div>
+        <div className="grid grid-cols-2 gap-3.5">
+          {transitData ? (
+            transitData.rerouting_suggestions?.map((r: any, idx: number) => (
+              <div key={idx} className="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 flex flex-col justify-between gap-2 shadow-inner">
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[9px] font-mono">
+                      {r.route_no}
+                    </span>
+                    <span className="text-[8px] text-white/30 font-semibold uppercase tracking-wider">BMTC Transit</span>
+                  </div>
+                  <p className="text-[10px] text-white/40 leading-tight mb-1">{r.issue}</p>
+                  <p className="text-[10px] font-medium text-emerald-300 leading-snug">
+                    <span className="text-white/40">Divert:</span> {r.reroute_via}
+                  </p>
+                </div>
+                <button className="mt-1 w-full text-[9px] font-bold py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded transition-colors uppercase tracking-wider">
+                  Deploy Priority Reroute
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-2 flex flex-col items-center justify-center py-6 text-center text-white/30 border border-dashed border-white/5 rounded-xl">
+              <Bus className="w-6 h-6 mb-1 text-white/20" />
+              <p className="text-[9px] font-bold tracking-wider uppercase">No Active Transit Diversions</p>
+              <p className="text-[8px] text-white/20 leading-snug mt-0.5">Toggle Priority Overlay to compute live bus lane bypasses.</p>
+            </div>
+          )}
         </div>
-
-        <MapWorkspace />
       </div>
 
-      {/* ── Right AI Drawer ── */}
+      {/* ── Right Floating AI Drawer ── */}
       <AIInspectorDrawer />
     </div>
   );

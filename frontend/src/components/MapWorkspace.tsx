@@ -113,7 +113,7 @@ export default function MapWorkspace() {
           mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
           reuseMaps
         >
-          <NavigationControl position="bottom-right" />
+          <NavigationControl position="bottom-left" />
         </Map>
       </DeckGL>
     </div>

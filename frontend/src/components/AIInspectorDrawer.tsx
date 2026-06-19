@@ -88,17 +88,17 @@ export default function AIInspectorDrawer() {
   const canResolve = isCommissioner || (isInspector && incident.police_station === user?.police_station);
 
   return (
-    <div className="w-96 border-l border-border bg-card shadow-2xl flex flex-col z-30 transition-transform duration-300 print-area">
-      <div className="p-4 border-b border-border flex justify-between items-center sticky top-0 bg-card z-10">
+    <div className="absolute right-4 top-20 bottom-36 w-96 rounded-2xl glass-panel shadow-2xl flex flex-col z-30 transition-all duration-300 print-area overflow-hidden">
+      <div className="p-4 border-b border-border/40 flex justify-between items-center sticky top-0 bg-card/40 backdrop-blur-md z-10">
         <div>
           <h2 className="font-bold">AI Inspector</h2>
-          <p className="text-xs text-muted-foreground">{incident.id}</p>
+          <p className="text-xs text-white/40 font-mono">{incident.id}</p>
         </div>
         <div className="flex items-center gap-2 no-print">
-          <button onClick={() => window.print()} title="Print Briefing / Save PDF" className="p-1.5 hover:bg-muted rounded-full">
+          <button onClick={() => window.print()} title="Print Briefing / Save PDF" className="p-1.5 hover:bg-muted/15 rounded-full transition-colors">
             <Printer className="w-4 h-4" />
           </button>
-          <button onClick={() => selectIncident(null)} className="p-1 hover:bg-muted rounded-full">
+          <button onClick={() => selectIncident(null)} className="p-1 hover:bg-muted/15 rounded-full transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
