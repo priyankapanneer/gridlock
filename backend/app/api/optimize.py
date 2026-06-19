@@ -111,12 +111,12 @@ async def get_transit_recommendations(
             {
                 "route_no": "500A (Hebbal - Silk Board)",
                 "issue": f"Severe traffic surge ({vehicles} active vehicles on ORR)",
-                "reroute_via": "Divert via Outer Bypass Bypass Link road"
+                "reroute_via": "Reroute via Outer Bypass Link Road due to projected corridor breakdown."
             },
             {
                 "route_no": "G-4 (Brigade Road - Whitefield)",
                 "issue": f"Critical footfall spike ({footfall} transit requests)",
-                "reroute_via": "Divert via Wind Tunnel Road link"
+                "reroute_via": "Divert via Wind Tunnel Link; deploy 15-second adaptive green wave offset."
             }
         ]
     elif vehicles > 2000 or footfall > 5000:

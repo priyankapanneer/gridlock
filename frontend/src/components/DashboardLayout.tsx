@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore, type Role } from '@/store/authStore';
 import { useIncidentStore } from '@/store/incidentStore';
-import { Shield, ChevronDown, LogOut, User, RefreshCw, CheckCircle, Download, Compass } from 'lucide-react';
+import { Shield, ChevronDown, LogOut, User, RefreshCw, CheckCircle, Download, Compass, X } from 'lucide-react';
 import MapWorkspace from './MapWorkspace';
 import IncidentTelemetry from './IncidentTelemetry';
 import AIInspectorDrawer from './AIInspectorDrawer';
@@ -440,6 +440,53 @@ export default function DashboardLayout() {
           {/* Dedicated Interactive Map Viewport */}
           <div className="flex-1 min-h-0 relative bg-zinc-950">
             <MapWorkspace />
+
+            {/* Simulation Alert Banner */}
+            {simulationData && (
+              <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-4 py-2.5 rounded-xl border backdrop-blur-md shadow-2xl animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-auto ${
+                simulationData.impact_level === 'low' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)]' :
+                simulationData.impact_level === 'moderate' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.15)]' :
+                'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.15)]'
+              }`}>
+                <span className="relative flex h-2 w-2">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                    simulationData.impact_level === 'low' ? 'bg-emerald-400' :
+                    simulationData.impact_level === 'moderate' ? 'bg-amber-400' :
+                    'bg-rose-400'
+                  }`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                    simulationData.impact_level === 'low' ? 'bg-emerald-500' :
+                    simulationData.impact_level === 'moderate' ? 'bg-amber-500' :
+                    'bg-rose-500'
+                  }`}></span>
+                </span>
+                
+                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider font-semibold">
+                  <span>Simulation Complete:</span>
+                  <span className={`font-bold ${
+                    simulationData.impact_level === 'low' ? 'text-emerald-300' :
+                    simulationData.impact_level === 'moderate' ? 'text-amber-300' :
+                    'text-rose-300'
+                  }`}>
+                    City Impact is {simulationData.impact_level.toUpperCase()}
+                  </span>
+                  <span className="text-zinc-500">|</span>
+                  <span>Spillback Delay:</span>
+                  <span className="text-white">+{simulationData.predicted_spillback_minutes}m</span>
+                  <span className="text-zinc-500">|</span>
+                  <span>Bottlenecks:</span>
+                  <span className="text-white">{simulationData.bottleneck_nodes?.length || 0} Nodes</span>
+                </div>
+                
+                <button 
+                  onClick={() => setSimulationData(null)}
+                  className="ml-2 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  title="Dismiss Simulation"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Split-Pane Detail Panel (Bottom-Right Deck) */}
@@ -462,36 +509,53 @@ export default function DashboardLayout() {
                 </div>
 
                 <div className="flex-1 overflow-x-auto flex gap-4 min-w-0 pb-1 items-stretch">
-                  {transitData.rerouting_suggestions?.map((r: any, idx: number) => (
-                    <div key={idx} className="w-80 shrink-0 bg-emerald-500/5 rounded-xl border border-emerald-500/10 flex flex-col justify-between p-3.5 shadow-inner">
-                      <div>
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[9px] font-mono">
-                            {r.route_no}
-                          </span>
-                          <span className="text-[8px] text-white/30 font-semibold uppercase tracking-wider">BMTC Transit</span>
+                  {transitData.rerouting_suggestions?.map((r: any, idx: number) => {
+                    const isEmergencyReroute = r.reroute_via !== "Maintain regular transit path";
+                    return (
+                      <div key={idx} className={`w-80 shrink-0 rounded-xl flex flex-col justify-between p-3.5 shadow-inner transition-all duration-300 ${
+                        isEmergencyReroute 
+                          ? "bg-amber-500/5 border border-amber-500/25 shadow-[0_0_12px_rgba(245,158,11,0.05)] animate-pulse" 
+                          : "bg-emerald-500/5 border border-emerald-500/10"
+                      }`}>
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className={`px-2 py-0.5 rounded font-bold text-[9px] font-mono border ${
+                              isEmergencyReroute
+                                ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                                : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                            }`}>
+                              {r.route_no}
+                            </span>
+                            <span className="text-[8px] text-white/30 font-semibold uppercase tracking-wider">BMTC Transit</span>
+                          </div>
+                          <p className="text-[10px] text-white/40 leading-tight mb-1">{r.issue}</p>
+                          <p className={`text-[10px] font-medium leading-snug ${
+                            isEmergencyReroute ? 'text-amber-400 drop-shadow-[0_0_4px_rgba(245,158,11,0.4)]' : 'text-emerald-300'
+                          }`}>
+                            <span className="text-white/40">Divert:</span> {r.reroute_via}
+                          </p>
                         </div>
-                        <p className="text-[10px] text-white/40 leading-tight mb-1">{r.issue}</p>
-                        <p className="text-[10px] font-medium text-emerald-300 leading-snug">
-                          <span className="text-white/40">Divert:</span> {r.reroute_via}
-                        </p>
+                        <button
+                          onClick={() => {
+                            setDeployedRoutes(prev => [...prev, r.route_no]);
+                            triggerToast(`Tactical Priority Deployed: BMTC ${r.route_no} successfully rerouted via ${r.reroute_via}. Signals synced.`, 'success');
+                          }}
+                          disabled={deployedRoutes.includes(r.route_no)}
+                          className={`mt-2 w-full text-[9px] font-bold py-1.5 rounded transition-all uppercase tracking-wider ${
+                            deployedRoutes.includes(r.route_no)
+                              ? isEmergencyReroute
+                                ? "bg-amber-500/20 text-amber-400 border border-amber-500/40 cursor-default"
+                                : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 cursor-default"
+                              : isEmergencyReroute
+                                ? "bg-amber-600 hover:bg-amber-500 text-white cursor-pointer"
+                                : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                          }`}
+                        >
+                          {deployedRoutes.includes(r.route_no) ? "✓ Deployed & Signals Synced" : "Deploy Priority Reroute"}
+                        </button>
                       </div>
-                      <button
-                        onClick={() => {
-                          setDeployedRoutes(prev => [...prev, r.route_no]);
-                          triggerToast(`Tactical Priority Deployed: BMTC ${r.route_no} successfully rerouted via ${r.reroute_via}. Signals synced.`, 'success');
-                        }}
-                        disabled={deployedRoutes.includes(r.route_no)}
-                        className={`mt-2 w-full text-[9px] font-bold py-1.5 rounded transition-all uppercase tracking-wider ${
-                          deployedRoutes.includes(r.route_no)
-                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 cursor-default"
-                            : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
-                        }`}
-                      >
-                        {deployedRoutes.includes(r.route_no) ? "✓ Deployed & Signals Synced" : "Deploy Priority Reroute"}
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ) : null}
