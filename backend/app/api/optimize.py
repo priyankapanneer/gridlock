@@ -104,9 +104,16 @@ async def get_transit_recommendations(
     vehicles: int = 6000,
     current_user: TokenData = Depends(get_current_user)
 ):
+    # Dynamic coordinates for lane-1 (ORR) and lane-2 (HAL Airport Road)
+    # Default coordinates
+    orr_coords = [[77.6739, 12.9245], [77.6811, 12.9284], [77.6928, 12.9368], [77.6986, 12.9464], [77.7006, 12.9694]]
+    hal_coords = [[77.6263, 12.9635], [77.6373, 12.9610], [77.6481, 12.9598], [77.6492, 12.9595], [77.6545, 12.9592], [77.6642, 12.9635], [77.6916, 12.9557]]
+
     # Dynamically generate recommendations based on surge parameters
     suggestions = []
     if vehicles > 5000 or footfall > 12000:
+        orr_coords = [[77.6839, 12.9145], [77.6950, 12.9220], [77.7080, 12.9300], [77.7120, 12.9450], [77.7150, 12.9600]]  # Outer Bypass Link Road
+        hal_coords = [[77.6545, 12.9592], [77.6530, 12.9450], [77.6510, 12.9320], [77.6580, 12.9250]]  # Wind Tunnel Link
         suggestions = [
             {
                 "route_no": "500A (Hebbal - Silk Board)",
@@ -120,6 +127,8 @@ async def get_transit_recommendations(
             }
         ]
     elif vehicles > 2000 or footfall > 5000:
+        orr_coords = [[77.6749, 12.9235], [77.6821, 12.9274], [77.6938, 12.9358], [77.6996, 12.9454], [77.7016, 12.9684]]  # Service Lane Bypass
+        hal_coords = [[77.6642, 12.9635], [77.6620, 12.9750], [77.6600, 12.9860]]  # Suranjan Das Road Link
         suggestions = [
             {
                 "route_no": "500A (Hebbal - Silk Board)",
@@ -152,13 +161,13 @@ async def get_transit_recommendations(
                 "id": "lane-1",
                 "name": "Outer Ring Road (ORR) Dedicated Lane",
                 "active_hours": "17:00 - 22:00",
-                "coordinates": [[77.6739, 12.9245], [77.6811, 12.9284], [77.6928, 12.9368], [77.6986, 12.9464], [77.7006, 12.9694]]
+                "coordinates": orr_coords
             },
             {
                 "id": "lane-2",
                 "name": "HAL Old Airport Road Bus Corridor",
                 "active_hours": "08:00 - 12:00",
-                "coordinates": [[77.6263, 12.9635], [77.6373, 12.9610], [77.6481, 12.9598], [77.6492, 12.9595], [77.6545, 12.9592], [77.6642, 12.9635], [77.6916, 12.9557]]
+                "coordinates": hal_coords
             },
             {
                 "id": "lane-3",
