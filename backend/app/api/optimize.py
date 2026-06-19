@@ -99,8 +99,53 @@ async def simulate_scenario(req: SimulateRequest, current_user: TokenData = Depe
     )
 
 @router.get("/transit/multi-modal", response_model=TransitResponse)
-async def get_transit_recommendations(current_user: TokenData = Depends(get_current_user)):
-    # Hardcoded premium lanes/rerouting recommendations matching Bengaluru area
+async def get_transit_recommendations(
+    footfall: int = 15000,
+    vehicles: int = 6000,
+    current_user: TokenData = Depends(get_current_user)
+):
+    # Dynamically generate recommendations based on surge parameters
+    suggestions = []
+    if vehicles > 5000 or footfall > 12000:
+        suggestions = [
+            {
+                "route_no": "500A (Hebbal - Silk Board)",
+                "issue": f"Severe traffic surge ({vehicles} active vehicles on ORR)",
+                "reroute_via": "Divert via Outer Bypass Bypass Link road"
+            },
+            {
+                "route_no": "G-4 (Brigade Road - Whitefield)",
+                "issue": f"Critical footfall spike ({footfall} transit requests)",
+                "reroute_via": "Divert via Wind Tunnel Road link"
+            }
+        ]
+    elif vehicles > 2000 or footfall > 5000:
+        suggestions = [
+            {
+                "route_no": "500A (Hebbal - Silk Board)",
+                "issue": f"Moderate spillback: {vehicles} vehicles active",
+                "reroute_via": "Divert via Service Lane Bypass"
+            },
+            {
+                "route_no": "G-4 (Brigade Road - Whitefield)",
+                "issue": "Sub-arterial slowdown",
+                "reroute_via": "Divert via Suranjan Das Road Link"
+            }
+        ]
+    else:
+        suggestions = [
+            {
+                "route_no": "500A (Hebbal - Silk Board)",
+                "issue": f"Light flow: traffic stable ({vehicles} vehicles)",
+                "reroute_via": "Maintain regular transit path"
+            },
+            {
+                "route_no": "G-4 (Brigade Road - Whitefield)",
+                "issue": "Standard transit timetables active",
+                "reroute_via": "Maintain regular transit path"
+            }
+        ]
+
     return TransitResponse(
         bus_lanes=[
             {
@@ -116,16 +161,5 @@ async def get_transit_recommendations(current_user: TokenData = Depends(get_curr
                 "coordinates": [[77.59, 12.97], [77.61, 12.96], [77.63, 12.95]]
             }
         ],
-        rerouting_suggestions=[
-            {
-                "route_no": "500A (Hebbal - Silk Board)",
-                "issue": "High spillback near Yelahanka / Marathahalli",
-                "reroute_via": "Divert via Outer Bypass Bypass Link road"
-            },
-            {
-                "route_no": "G-4 (Brigade Road - Whitefield)",
-                "issue": "Heavy congestion cluster near HAL road",
-                "reroute_via": "Divert via Wind Tunnel Road link"
-            }
-        ]
+        rerouting_suggestions=suggestions
     )

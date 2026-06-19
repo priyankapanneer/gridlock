@@ -1,4 +1,3 @@
-import React from 'react'
 import { useAuthStore } from '@/store/authStore'
 import AuthPage from '@/components/AuthPage'
 import DashboardLayout from '@/components/DashboardLayout'

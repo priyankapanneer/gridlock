@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuthStore, MOCK_USERS, type Role } from '@/store/authStore';
+import { useAuthStore, type Role } from '@/store/authStore';
 import { Shield, Eye, EyeOff, AlertCircle, Zap } from 'lucide-react';
 
 type AuthView = 'login' | 'register';

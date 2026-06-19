@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useIncidentStore } from '@/store/incidentStore';
 import { useAuthStore } from '@/store/authStore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { X, Clock, Users, Cone, Route, Check, AlertTriangle, ShieldCheck, Printer } from 'lucide-react';
+import { X, Clock, Users, Cone, Route, Check, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function AIInspectorDrawer() {
@@ -83,240 +82,242 @@ export default function AIInspectorDrawer() {
   const isInspector = user?.role === 'Field Inspector';
   const isCommissioner = user?.role === 'Command Commissioner';
   const isPlanner = user?.role === 'Transit Planner';
-
-  // Can resolve: Commissioner, or Inspector if the incident belongs to their station
   const canResolve = isCommissioner || (isInspector && incident.police_station === user?.police_station);
 
   return (
-    <div className="absolute right-4 top-20 bottom-36 w-96 rounded-2xl glass-panel shadow-2xl flex flex-col z-30 transition-all duration-300 print-area overflow-hidden">
-      <div className="p-4 border-b border-border/40 flex justify-between items-center sticky top-0 bg-card/40 backdrop-blur-md z-10">
+    <div className="w-full h-full flex items-stretch gap-4 p-4 overflow-x-auto min-w-0 bg-[#090d16] select-none pr-10">
+      
+      {/* CARD 1: Incident Overview & Clear Status */}
+      <div className="w-72 shrink-0 glass-panel border border-white/8 rounded-xl p-3 flex flex-col justify-between bg-black/15">
         <div>
-          <h2 className="font-bold">AI Inspector</h2>
-          <p className="text-xs text-white/40 font-mono">{incident.id}</p>
-        </div>
-        <div className="flex items-center gap-2 no-print">
-          <button onClick={() => window.print()} title="Print Briefing / Save PDF" className="p-1.5 hover:bg-muted/15 rounded-full transition-colors">
-            <Printer className="w-4 h-4" />
-          </button>
-          <button onClick={() => selectIncident(null)} className="p-1 hover:bg-muted/15 rounded-full transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {isLoadingPredict ? (
-          <div className="flex flex-col items-center justify-center h-40 space-y-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p className="text-sm text-muted-foreground animate-pulse">Running LightGBM Inference...</p>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest font-mono">Telemetry Event</span>
+            <button onClick={() => selectIncident(null)} className="text-white/40 hover:text-white/80 p-0.5 hover:bg-white/5 rounded cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
           </div>
-        ) : (
-          <>
-            {/* Status Display */}
-            <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl border border-border">
-              <span className="text-xs font-semibold text-muted-foreground uppercase">Status</span>
-              <Badge className={cn(
-                "capitalize font-medium",
-                incident.status === 'active' ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-green-500/10 text-green-400 border border-green-500/20"
-              )}>
-                {incident.status}
-              </Badge>
+          <h3 className="text-xs font-bold text-white leading-snug truncate">{incident.address}</h3>
+          <p className="text-[10px] text-white/40 font-mono mt-1 mb-2">ID: {incident.id}</p>
+          
+          <div className="flex items-center justify-between p-2 bg-[#0b0f19]/80 rounded-lg border border-white/5 text-[11px] mb-2">
+            <span className="text-white/50 font-mono uppercase text-[9px]">Status</span>
+            <Badge className={cn(
+              "capitalize font-medium text-[9px] px-1.5 py-0.5",
+              incident.status === 'active' ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-green-500/10 text-green-400 border border-green-500/20"
+            )}>
+              {incident.status}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="space-y-1.5 shrink-0">
+          {canResolve ? (
+            incident.status === 'active' ? (
+              <button
+                onClick={() => handleUpdateStatus('resolved')}
+                disabled={isUpdatingStatus}
+                className="w-full flex items-center justify-center gap-1.5 text-[10px] font-semibold py-1.5 px-3 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors border border-green-500/20 disabled:opacity-50 cursor-pointer"
+              >
+                <Check className="w-3.5 h-3.5" /> Clear Incident
+              </button>
+            ) : (
+              <button
+                onClick={() => handleUpdateStatus('active')}
+                disabled={isUpdatingStatus}
+                className="w-full flex items-center justify-center gap-1.5 text-[10px] font-semibold py-1.5 px-3 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors border border-red-500/20 disabled:opacity-50 cursor-pointer"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" /> Re-open Incident
+              </button>
+            )
+          ) : (
+            <div className="p-2 bg-yellow-500/5 border border-yellow-500/10 rounded-lg text-[9px] text-yellow-500/80 leading-normal">
+              Only inspectors from <strong>{incident.police_station} PS</strong> can clear this event.
             </div>
-
-            {/* Prediction Card */}
-            {predictionData && (
-              <Card className="border-primary/50 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-sm flex items-center">
-                      <Clock className="w-4 h-4 mr-2 text-blue-400" />
-                      Predicted Time-to-Clear
-                    </CardTitle>
-                    <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20">
-                      LightGBM v4
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold text-center my-4 text-blue-400">
-                    {predictionData.eta_minutes} <span className="text-lg text-muted-foreground font-normal">min</span>
-                  </div>
-                  
-                  <div className="space-y-2 mt-6">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase">SHAP Contributions</h4>
-                    {Object.entries(predictionData.shap_values).map(([feature, value]) => (
-                      <div key={feature} className="flex flex-col gap-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="capitalize">{feature.replace('_', ' ')}</span>
-                          <span className={value > 0 ? "text-destructive" : "text-green-500"}>
-                            {value > 0 ? '+' : ''}{value.toFixed(1)}m
-                          </span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-1.5">
-                          <div 
-                             className={cn("h-1.5 rounded-full", value > 0 ? "bg-destructive" : "bg-green-500")}
-                             style={{ width: `${Math.min(Math.abs(value) / (predictionData.eta_minutes || 1) * 100, 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Prescriptive Card */}
-            {prescriptiveData && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Prescriptive Allocation</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col items-center p-3 bg-muted/50 rounded-lg">
-                      <Users className="w-5 h-5 mb-1 text-orange-400" />
-                      <span className="text-xl font-bold">{prescriptiveData.officers_needed}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase">Officers</span>
-                    </div>
-                    <div className="flex flex-col items-center p-3 bg-muted/50 rounded-lg">
-                      <Cone className="w-5 h-5 mb-1 text-yellow-400" />
-                      <span className="text-xl font-bold">{prescriptiveData.barricades_needed}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase">Barricades</span>
-                    </div>
-                  </div>
-                  
-                  {prescriptiveData.bypass_routes.length > 0 && (
-                    <div className="mt-4 border-t border-border pt-4">
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center">
-                        <Route className="w-3 h-3 mr-1" /> Network Flow Bypass
-                      </h4>
-                      <ul className="space-y-2">
-                        {prescriptiveData.bypass_routes.map((route, i) => (
-                          <li key={i} className="text-xs p-2 bg-primary/10 rounded border border-primary/20">
-                            {route}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* GenAI SOP Tactical Briefing Card */}
-            {sopBriefing.length > 0 && (
-              <Card className="border-emerald-500/20 bg-emerald-950/5 shadow-[0_0_15px_rgba(16,185,129,0.05)]">
-                <CardHeader className="pb-1">
-                  <CardTitle className="text-xs text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider font-bold">
-                    <ShieldCheck className="w-3.5 h-3.5" /> Llama 3 Tactical Briefing (SOP)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <ul className="space-y-2 text-xs text-slate-300">
-                    {sopBriefing.map((bullet, idx) => (
-                      <li key={idx} className="bg-emerald-500/5 p-2 rounded border border-emerald-500/10 leading-snug">
-                        {bullet}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Role Specific Control Board */}
-            <div className="border-t border-border pt-6 space-y-4">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase">Operational Actions</h3>
-              
-              {isPlanner && (
-                <div className="p-3 bg-purple-500/5 rounded-xl border border-purple-500/15 space-y-3">
-                  <p className="text-[10px] uppercase font-bold tracking-wider text-purple-400">Transit Optimization Controls</p>
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Traffic Signal Offset</span>
-                      <span className="text-purple-300 font-semibold font-mono">+24s (Adaptive)</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Queue Spillback risk</span>
-                      <span className="text-yellow-400 font-semibold">Moderate (42%)</span>
-                    </div>
-                  </div>
-                  <button className="w-full text-xs font-semibold py-2 px-3 bg-purple-600/80 hover:bg-purple-600 border border-purple-400/30 text-white rounded-lg transition-all shadow-md">
-                    Trigger Smart Signal Adjustments
-                  </button>
-                </div>
-              )}
-
-              {(isCommissioner || isInspector) && (
-                <div className="space-y-4 no-print">
-                  {/* Closed-loop Feedback Form for Ground Personnel */}
-                  {canResolve && (
-                    <form onSubmit={handleSubmitFeedback} className="p-3 bg-blue-500/5 rounded-xl border border-blue-500/15 space-y-3 text-xs">
-                      <p className="text-[10px] uppercase font-bold tracking-wider text-blue-400">Verify Ground Deployment (Feedback Loop)</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[9px] text-muted-foreground">Officers Deployed</label>
-                          <input type="number" value={officersDeployed} onChange={e => setOfficersDeployed(parseInt(e.target.value) || 0)} className="w-full bg-background border border-border rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500" />
-                        </div>
-                        <div>
-                          <label className="text-[9px] text-muted-foreground">Barricades Deployed</label>
-                          <input type="number" value={barricadesDeployed} onChange={e => setBarricadesDeployed(parseInt(e.target.value) || 0)} className="w-full bg-background border border-border rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500" />
-                        </div>
-                      </div>
-                      <button type="submit" disabled={isSubmittingFeedback} className="w-full font-semibold py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors disabled:opacity-50">
-                        {isSubmittingFeedback ? "Updating..." : "Submit Deploy Verification"}
-                      </button>
-
-                      {feedbackResult && (
-                        <div className="p-2 bg-black/40 rounded border border-blue-500/20 text-[10px] space-y-1.5 animate-fadeIn">
-                          <div className="flex justify-between items-center">
-                            <span>Sector Speed Drop:</span>
-                            <span className={cn("font-bold font-mono", feedbackResult.speed_drop_kmh > 10 ? "text-red-400" : "text-green-400")}>
-                              -{feedbackResult.speed_drop_kmh} km/h
-                            </span>
-                          </div>
-                          {feedbackResult.escalated && (
-                            <div className="flex items-center gap-1 text-[9px] text-red-400 font-bold uppercase live-pulse">
-                              <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> Speed drop threshold exceeded!
-                            </div>
-                          )}
-                          <div className="text-[9px] text-slate-300 border-t border-border pt-1">
-                            <span className="font-semibold text-blue-300">Rec. Detour:</span> {feedbackResult.recommended_detour}
-                          </div>
-                        </div>
-                      )}
-                    </form>
-                  )}
-
-                  {canResolve ? (
-                    incident.status === 'active' ? (
-                      <button
-                        onClick={() => handleUpdateStatus('resolved')}
-                        disabled={isUpdatingStatus}
-                        className="w-full flex items-center justify-center gap-2 text-xs font-semibold py-2.5 px-3 bg-green-600/90 hover:bg-green-600 text-white rounded-lg transition-all border border-green-500/20 disabled:opacity-50"
-                      >
-                        <Check className="w-4 h-4" /> Clear Incident / Mark Resolved
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleUpdateStatus('active')}
-                        disabled={isUpdatingStatus}
-                        className="w-full flex items-center justify-center gap-2 text-xs font-semibold py-2.5 px-3 bg-red-600/90 hover:bg-red-600 text-white rounded-lg transition-all border border-red-500/20 disabled:opacity-50"
-                      >
-                        <AlertTriangle className="w-4 h-4" /> Re-open Incident (Set Active)
-                      </button>
-                    )
-                  ) : (
-                    <div className="flex gap-2 p-3 bg-yellow-500/5 border border-yellow-500/10 rounded-xl text-[11px] text-yellow-500/90">
-                      <ShieldCheck className="w-4 h-4 flex-shrink-0" />
-                      <span>Only inspectors from <strong>{incident.police_station} PS</strong> can clear this incident.</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* CARD 2: LightGBM Predictions & SHAP explainability */}
+      {isLoadingPredict ? (
+        <div className="w-80 shrink-0 glass-panel border border-white/8 rounded-xl p-3 flex flex-col justify-center items-center gap-3 bg-black/15">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          <p className="text-[10px] text-muted-foreground animate-pulse font-mono">Running LightGBM Inference...</p>
+        </div>
+      ) : (
+        predictionData && (
+          <div className="w-80 shrink-0 glass-panel border border-white/8 rounded-xl p-3 flex flex-col justify-between bg-black/15 overflow-y-auto">
+            <div>
+              <div className="flex justify-between items-center mb-1.5 pb-1.5 border-b border-white/5">
+                <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest font-mono flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-blue-400" />
+                  Time-to-Clear
+                </span>
+                <Badge variant="outline" className="text-[9px] bg-blue-500/10 text-blue-400 border-blue-500/20 px-1 py-0">
+                  LightGBM v4
+                </Badge>
+              </div>
+              <div className="text-3xl font-black text-center my-1.5 text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.4)] font-mono">
+                {predictionData.eta_minutes} <span className="text-xs text-muted-foreground font-normal">min</span>
+              </div>
+              
+              <div className="space-y-1.5 mt-2">
+                <h4 className="text-[9px] font-bold text-white/40 uppercase tracking-wider font-mono">SHAP Contribution Metrics</h4>
+                {Object.entries(predictionData.shap_values).map(([feature, value]) => (
+                  <div key={feature} className="flex flex-col gap-0.5 text-[10px]">
+                    <div className="flex justify-between font-mono">
+                      <span className="capitalize text-white/60 truncate max-w-[160px]">{feature.replace('_', ' ')}</span>
+                      <span className={value > 0 ? "text-red-400 font-bold" : "text-green-400 font-bold"}>
+                        {value > 0 ? '+' : ''}{value.toFixed(1)}m
+                      </span>
+                    </div>
+                    <div className="w-full bg-[#0b0f19] rounded-full h-1">
+                      <div 
+                         className={cn("h-1 rounded-full", value > 0 ? "bg-red-500" : "bg-green-500")}
+                         style={{ width: `${Math.min(Math.abs(value) / (predictionData.eta_minutes || 1) * 100, 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+      )}
+
+      {/* CARD 3: Prescriptive Resource Allocation & Bypass */}
+      {prescriptiveData && (
+        <div className="w-80 shrink-0 glass-panel border border-white/8 rounded-xl p-3 flex flex-col justify-between bg-black/15 overflow-y-auto">
+          <div>
+            <div className="pb-1.5 border-b border-white/5 mb-1.5">
+              <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest font-mono">
+                Prescriptive Resource Deck
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <div className="flex flex-col items-center p-2 bg-[#0b0f19]/80 rounded-lg border border-white/5">
+                <Users className="w-4 h-4 mb-1 text-orange-400" />
+                <span className="text-base font-bold font-mono text-orange-300">{prescriptiveData.officers_needed}</span>
+                <span className="text-[8px] text-white/40 uppercase font-mono">Officers</span>
+              </div>
+              <div className="flex flex-col items-center p-2 bg-[#0b0f19]/80 rounded-lg border border-white/5">
+                <Cone className="w-4 h-4 mb-1 text-yellow-400" />
+                <span className="text-base font-bold font-mono text-yellow-300">{prescriptiveData.barricades_needed}</span>
+                <span className="text-[8px] text-white/40 uppercase font-mono">Barricades</span>
+              </div>
+            </div>
+            
+            {prescriptiveData.bypass_routes.length > 0 && (
+              <div className="space-y-1">
+                <h4 className="text-[9px] font-bold text-white/40 uppercase tracking-wider font-mono flex items-center gap-0.5">
+                  <Route className="w-3 h-3 text-cyan-400" /> Network Flow Bypass
+                </h4>
+                <ul className="space-y-1">
+                  {prescriptiveData.bypass_routes.map((route, i) => (
+                    <li key={i} className="text-[10px] p-1.5 bg-cyan-950/20 rounded border border-cyan-800/30 text-cyan-200 font-medium">
+                      {route}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* CARD 4: Llama 3 Tactical SOP Briefing */}
+      {sopBriefing.length > 0 && (
+        <div className="w-80 shrink-0 glass-panel border border-white/8 rounded-xl p-3 flex flex-col justify-between bg-black/15 overflow-y-auto">
+          <div>
+            <div className="pb-1.5 border-b border-white/5 mb-1.5">
+              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest font-mono flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5" /> Llama 3 Tactical SOP
+              </span>
+            </div>
+            <ul className="space-y-1.5 text-[10px] text-slate-300">
+              {sopBriefing.map((bullet, idx) => (
+                <li key={idx} className="bg-emerald-500/5 p-1.5 rounded border border-emerald-500/10 leading-snug">
+                  {bullet}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* CARD 5: Verify Ground Deployment (Feedback Loop) */}
+      {(isCommissioner || isInspector) && canResolve && (
+        <div className="w-80 shrink-0 glass-panel border border-white/8 rounded-xl p-3 flex flex-col justify-between bg-black/15 overflow-y-auto no-print">
+          <form onSubmit={handleSubmitFeedback} className="space-y-2.5 h-full flex flex-col justify-between">
+            <div>
+              <div className="pb-1.5 border-b border-white/5 mb-2">
+                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest font-mono">
+                  Ground Deployment Loop
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[10px] mb-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] text-white/50 font-mono">Officers</label>
+                  <input type="number" value={officersDeployed} onChange={e => setOfficersDeployed(parseInt(e.target.value) || 0)} className="w-full bg-[#0b0f19] border border-white/10 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500 text-white font-mono" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] text-white/50 font-mono">Barricades</label>
+                  <input type="number" value={barricadesDeployed} onChange={e => setBarricadesDeployed(parseInt(e.target.value) || 0)} className="w-full bg-[#0b0f19] border border-white/10 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500 text-white font-mono" />
+                </div>
+              </div>
+              
+              {feedbackResult && (
+                <div className="p-2 bg-black/40 rounded border border-blue-500/20 text-[9px] space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/40">Sector Speed Drop:</span>
+                    <span className={cn("font-bold font-mono", feedbackResult.speed_drop_kmh > 10 ? "text-red-400" : "text-green-400")}>
+                      -{feedbackResult.speed_drop_kmh} km/h
+                    </span>
+                  </div>
+                  {feedbackResult.escalated && (
+                    <div className="text-[8px] text-red-400 font-bold uppercase live-pulse">
+                      Speed drop exceeded threshold!
+                    </div>
+                  )}
+                  <div className="text-[8px] text-slate-300 border-t border-white/5 pt-1 truncate">
+                    <span className="font-semibold text-blue-300">Rec. Detour:</span> {feedbackResult.recommended_detour}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button type="submit" disabled={isSubmittingFeedback} className="w-full text-[10px] font-semibold py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors disabled:opacity-50 cursor-pointer">
+              {isSubmittingFeedback ? "Submitting..." : "Verify Ground Deploy"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* CARD 6: Transit Signal offsets (Planner control overlay) */}
+      {isPlanner && (
+        <div className="w-72 shrink-0 glass-panel border border-white/8 rounded-xl p-3 flex flex-col justify-between bg-black/15 no-print">
+          <div className="space-y-2">
+            <div className="pb-1.5 border-b border-white/5 mb-1.5">
+              <span className="text-[10px] font-bold text-purple-400 uppercase tracking-widest font-mono">
+                Transit Optimization Controls
+              </span>
+            </div>
+            <div className="space-y-1.5 text-[10px] font-mono">
+              <div className="flex justify-between">
+                <span className="text-white/40">Signal Offset</span>
+                <span className="text-purple-300 font-bold">+24s (Adaptive)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-white/40">Queue Spillback</span>
+                <span className="text-yellow-400 font-bold">Moderate (42%)</span>
+              </div>
+            </div>
+          </div>
+          <button className="w-full text-[10px] font-bold py-1.5 bg-purple-600/80 hover:bg-purple-600 border border-purple-400/30 text-white rounded-lg transition-colors uppercase tracking-wider cursor-pointer">
+            Trigger Signal offset
+          </button>
+        </div>
+      )}
     </div>
   );
 }
