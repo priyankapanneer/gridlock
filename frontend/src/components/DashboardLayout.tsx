@@ -221,6 +221,7 @@ export default function DashboardLayout() {
 
   const highCount = incidents.filter(i => i.priority === 'High').length;
   const role = user?.role ?? 'Field Inspector';
+  const showBottomDeck = !!selectedIncidentId || (role === 'Transit Planner' && showBusLanes && !!transitData);
 
   return (
     <div className="w-screen h-screen flex flex-col bg-zinc-950 text-foreground overflow-hidden font-sans select-none">
@@ -442,7 +443,9 @@ export default function DashboardLayout() {
           </div>
 
           {/* Split-Pane Detail Panel (Bottom-Right Deck) */}
-          <div className="h-72 bg-[#090d16] border-t border-zinc-800 shrink-0 overflow-hidden flex flex-col relative z-20">
+          <div className={`transition-all duration-300 ease-in-out bg-[#090d16] shrink-0 overflow-hidden flex flex-col relative z-20 ${
+            showBottomDeck ? 'h-72 border-t border-zinc-800' : 'h-0 border-t-0'
+          }`}>
             {selectedIncidentId ? (
               <AIInspectorDrawer />
             ) : showBusLanes && transitData ? (
@@ -491,29 +494,7 @@ export default function DashboardLayout() {
                   ))}
                 </div>
               </div>
-            ) : (
-              // Empty State
-              <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-[#090d16]/30">
-                {/* Tech Radar Crosshair Animation Mock */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-                  <div className="w-[500px] h-[500px] border border-white rounded-full animate-ping duration-10000" />
-                  <div className="w-[300px] h-[300px] border border-dashed border-white rounded-full animate-spin duration-15000" />
-                  <div className="w-32 h-32 border border-white rounded-full" />
-                </div>
-                <div className="text-center space-y-2 z-10">
-                  <div className="flex items-center justify-center gap-2 text-[10px] text-zinc-500 font-mono tracking-widest uppercase animate-pulse">
-                    <span className="w-2 h-2 rounded-full bg-zinc-500 inline-block animate-ping" />
-                    <span>Resilio Command Platform // System Awaiting Input</span>
-                  </div>
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                    Awaiting event selection from the telemetry stream
-                  </h3>
-                  <p className="text-[10px] text-zinc-600 max-w-md mx-auto leading-normal px-4">
-                    Select an anomaly card from the live telemetry feed on the left to inspect machine learning eta predictions, SHAP explainability curves, and dispatch tactical responses.
-                  </p>
-                </div>
-              </div>
-            )}
+            ) : null}
           </div>
         </main>
       </div>
