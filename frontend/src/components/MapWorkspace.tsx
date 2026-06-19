@@ -14,7 +14,7 @@ const INITIAL_VIEW_STATE = {
 };
 
 export default function MapWorkspace() {
-  const { incidents, selectedIncidentId, selectIncident, simulationData, transitData, deployedRoutes } = useIncidentStore();
+  const { incidents, selectedIncidentId, selectIncident, simulationData, transitData, deployedRoutes, footfall, vehicles } = useIncidentStore();
   const [clusters, setClusters] = useState<any[]>([]);
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 
@@ -94,7 +94,35 @@ export default function MapWorkspace() {
               if (d.id === 'lane-2' && r.startsWith('G-4')) return true;
               return false;
             });
-            return isDeployed ? [6, 182, 212, 255] : [34, 197, 94, 255]; // Neon cyan-blue if active prioritised route
+            if (isDeployed) {
+              return [6, 182, 212, 255]; // Priority Neon Cyan-Blue
+            }
+
+            const isHighVehicles = (vehicles || 0) >= 5000;
+            const isHighFootfall = (footfall || 0) >= 10000;
+
+            if (isHighVehicles && isHighFootfall) {
+              // Compound Gridlock Coordinated Override
+              if (d.id === 'lane-1' || d.id === 'lane-5') return [6, 182, 212, 255]; // Highways: Neon Cyan-blue
+              if (d.id === 'lane-2' || d.id === 'lane-3' || d.id === 'lane-7') return [239, 68, 68, 255]; // Core corridors: Crimson Red
+              return [245, 158, 11, 255]; // Amber-Orange
+            }
+
+            if (isHighVehicles) {
+              // Outer/Peripheral Highway Corridors highlight
+              if (d.id === 'lane-1' || d.id === 'lane-5' || d.id === 'lane-6') {
+                return [6, 182, 212, 255]; // Neon Cyan-Blue
+              }
+            }
+
+            if (isHighFootfall) {
+              // Inner City / High-Density Transit Corridors highlight
+              if (d.id === 'lane-2' || d.id === 'lane-3' || d.id === 'lane-4' || d.id === 'lane-7') {
+                return [245, 158, 11, 255]; // Amber-Orange
+              }
+            }
+
+            return [34, 197, 94, 200]; // Standard green with moderate opacity
           },
           getWidth: (d: any) => {
             const isDeployed = (deployedRoutes || []).some(r => {
@@ -102,7 +130,22 @@ export default function MapWorkspace() {
               if (d.id === 'lane-2' && r.startsWith('G-4')) return true;
               return false;
             });
-            return isDeployed ? 20 : 12; // Extra thickness for priority visual wow
+            if (isDeployed) return 24; // Extra thick priority
+
+            const isHighVehicles = (vehicles || 0) >= 5000;
+            const isHighFootfall = (footfall || 0) >= 10000;
+
+            if (isHighVehicles && isHighFootfall) return 20; // Coordinated gridlock override
+
+            if (isHighVehicles && (d.id === 'lane-1' || d.id === 'lane-5' || d.id === 'lane-6')) {
+              return 18;
+            }
+
+            if (isHighFootfall && (d.id === 'lane-2' || d.id === 'lane-3' || d.id === 'lane-4' || d.id === 'lane-7')) {
+              return 18;
+            }
+
+            return 10; // Standard thickness
           },
           widthMinPixels: 4,
           pickable: true
@@ -111,7 +154,7 @@ export default function MapWorkspace() {
     }
 
     return list;
-  }, [incidents, clusters, selectedIncidentId, selectIncident, simulationData, transitData, deployedRoutes]);
+  }, [incidents, clusters, selectedIncidentId, selectIncident, simulationData, transitData, deployedRoutes, footfall, vehicles]);
 
   return (
     <div className="absolute inset-0">

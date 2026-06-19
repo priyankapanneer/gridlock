@@ -28,7 +28,9 @@ export default function DashboardLayout() {
     simulationData, setSimulationData, 
     transitData, setTransitData,
     selectedIncidentId,
-    deployedRoutes, setDeployedRoutes
+    deployedRoutes, setDeployedRoutes,
+    footfall, setFootfall,
+    vehicles, setVehicles
   } = useIncidentStore();
   
   const [showRoleMenu, setShowRoleMenu] = useState(false);
@@ -45,8 +47,6 @@ export default function DashboardLayout() {
   };
   
   // Sandbox simulation states
-  const [footfall, setFootfall] = useState(15000);
-  const [vehicles, setVehicles] = useState(6000);
   const [isSimulating, setIsSimulating] = useState(false);
   
   // Transit overlays state
