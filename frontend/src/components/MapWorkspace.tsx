@@ -14,7 +14,7 @@ const INITIAL_VIEW_STATE = {
 };
 
 export default function MapWorkspace() {
-  const { incidents, selectedIncidentId, selectIncident, simulationData, transitData } = useIncidentStore();
+  const { incidents, selectedIncidentId, selectIncident, simulationData, transitData, deployedRoutes } = useIncidentStore();
   const [clusters, setClusters] = useState<any[]>([]);
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 
@@ -88,8 +88,22 @@ export default function MapWorkspace() {
           id: 'bus-lanes-layer',
           data: transitData.bus_lanes,
           getPath: d => d.coordinates,
-          getColor: [34, 197, 94, 255], // Green path
-          getWidth: 12,
+          getColor: (d: any) => {
+            const isDeployed = (deployedRoutes || []).some(r => {
+              if (d.id === 'lane-1' && r.startsWith('500A')) return true;
+              if (d.id === 'lane-2' && r.startsWith('G-4')) return true;
+              return false;
+            });
+            return isDeployed ? [6, 182, 212, 255] : [34, 197, 94, 255]; // Neon cyan-blue if active prioritised route
+          },
+          getWidth: (d: any) => {
+            const isDeployed = (deployedRoutes || []).some(r => {
+              if (d.id === 'lane-1' && r.startsWith('500A')) return true;
+              if (d.id === 'lane-2' && r.startsWith('G-4')) return true;
+              return false;
+            });
+            return isDeployed ? 20 : 12; // Extra thickness for priority visual wow
+          },
           widthMinPixels: 4,
           pickable: true
         }) as any
@@ -97,7 +111,7 @@ export default function MapWorkspace() {
     }
 
     return list;
-  }, [incidents, clusters, selectedIncidentId, selectIncident, simulationData, transitData]);
+  }, [incidents, clusters, selectedIncidentId, selectIncident, simulationData, transitData, deployedRoutes]);
 
   return (
     <div className="absolute inset-0">

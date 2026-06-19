@@ -27,7 +27,8 @@ export default function DashboardLayout() {
     setProxyAlerts, 
     simulationData, setSimulationData, 
     transitData, setTransitData,
-    selectedIncidentId
+    selectedIncidentId,
+    deployedRoutes, setDeployedRoutes
   } = useIncidentStore();
   
   const [showRoleMenu, setShowRoleMenu] = useState(false);
@@ -35,7 +36,6 @@ export default function DashboardLayout() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Tactical Routing & Notification states
-  const [deployedRoutes, setDeployedRoutes] = useState<string[]>([]);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
 
   const triggerToast = (message: string, type: 'success' | 'info' | 'warning' = 'success') => {
@@ -565,7 +565,7 @@ export default function DashboardLayout() {
 
       {/* ── Dynamic Tactical Alert Toast ── */}
       {toast && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="absolute top-20 right-4 z-50 pointer-events-none animate-in fade-in slide-in-from-top-4 duration-300">
           <div className={`glass-panel px-4 py-2.5 rounded-xl border flex items-center gap-2.5 shadow-2xl ${
             toast.type === 'success' ? 'border-emerald-500/30 text-emerald-300 bg-emerald-950/20' :
             toast.type === 'warning' ? 'border-yellow-500/30 text-yellow-300 bg-yellow-950/20' :

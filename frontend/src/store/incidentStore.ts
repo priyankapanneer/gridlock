@@ -40,6 +40,7 @@ interface IncidentState {
   simulationData: any | null;
   transitData: any | null;
   sopBriefing: string[];
+  deployedRoutes: string[];
   setIncidents: (incidents: Incident[]) => void;
   selectIncident: (id: string | null) => void;
   fetchAIInsights: (id: string) => Promise<void>;
@@ -47,6 +48,7 @@ interface IncidentState {
   setSimulationData: (data: any) => void;
   setTransitData: (data: any) => void;
   fetchSopBriefing: (id: string) => Promise<void>;
+  setDeployedRoutes: (routes: string[] | ((prev: string[]) => string[])) => void;
 }
 
 import { useAuthStore } from './authStore';
@@ -61,12 +63,20 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
   simulationData: null,
   transitData: null,
   sopBriefing: [],
+  deployedRoutes: [],
   
   setIncidents: (incidents) => set({ incidents }),
   
   setProxyAlerts: (proxyAlerts) => set({ proxyAlerts }),
   setSimulationData: (simulationData) => set({ simulationData }),
   setTransitData: (transitData) => set({ transitData }),
+  setDeployedRoutes: (routes) => {
+    if (typeof routes === 'function') {
+      set((state) => ({ deployedRoutes: routes(state.deployedRoutes) }));
+    } else {
+      set({ deployedRoutes: routes });
+    }
+  },
   
   selectIncident: (id) => {
     set({ selectedIncidentId: id });
