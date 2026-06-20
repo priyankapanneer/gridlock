@@ -229,6 +229,17 @@ export default function DashboardLayout() {
     return () => window.removeEventListener('click', handleGlobalClick);
   }, []);
 
+  useEffect(() => {
+    const handleToastEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        triggerToast(customEvent.detail.message, customEvent.detail.type);
+      }
+    };
+    window.addEventListener('app-toast', handleToastEvent);
+    return () => window.removeEventListener('app-toast', handleToastEvent);
+  }, []);
+
   const highCount = incidents.filter(i => i.priority === 'High').length;
   const role = user?.role ?? 'Field Inspector';
   const showBottomDeck = !!selectedIncidentId || (role === 'Transit Planner' && showBusLanes && !!transitData);

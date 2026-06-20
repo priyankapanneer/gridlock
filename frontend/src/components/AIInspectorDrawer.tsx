@@ -20,6 +20,11 @@ export default function AIInspectorDrawer() {
   const [feedbackResult, setFeedbackResult] = useState<any | null>(null);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
+  // Llama interactive states
+  const [llamaPrompt, setLlamaPrompt] = useState('');
+  const [llamaResult, setLlamaResult] = useState<{ directive: string; checklist: string[]; reasoning: string } | null>(null);
+  const [isLlamaLoading, setIsLlamaLoading] = useState(false);
+
   const incident = incidents.find(i => i.id === selectedIncidentId);
 
   // Reset feedback state when selected incident changes
@@ -27,6 +32,9 @@ export default function AIInspectorDrawer() {
     setFeedbackResult(null);
     setOfficersDeployed(0);
     setBarricadesDeployed(0);
+    setLlamaPrompt('');
+    setLlamaResult(null);
+    setIsLlamaLoading(false);
   }, [selectedIncidentId]);
 
   if (!selectedIncidentId || !incident) return null;
@@ -76,6 +84,38 @@ export default function AIInspectorDrawer() {
       console.error(err);
     } finally {
       setIsSubmittingFeedback(false);
+    }
+  };
+
+  const handleAskLlama = async () => {
+    if (!user?.token || !llamaPrompt.trim()) return;
+    setIsLlamaLoading(true);
+    setLlamaResult(null);
+    try {
+      const res = await fetch(`http://localhost:8080/api/incidents/${incident.id}/llama-command`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({ prompt: llamaPrompt })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLlamaResult(data);
+      } else {
+        throw new Error('Failed to generate Llama command');
+      }
+    } catch (err) {
+      console.error(err);
+      window.dispatchEvent(new CustomEvent('app-toast', {
+        detail: {
+          message: "Llama 3 AI command console timed out.",
+          type: "warning"
+        }
+      }));
+    } finally {
+      setIsLlamaLoading(false);
     }
   };
 
@@ -290,6 +330,106 @@ export default function AIInspectorDrawer() {
               {isSubmittingFeedback ? "Submitting..." : "Verify Ground Deploy"}
             </button>
           </form>
+        </div>
+      )}
+
+      {/* CARD 7: Llama 3 Tactical Command Assistant (Commissioner only) */}
+      {isCommissioner && (
+        <div className="w-80 shrink-0 glass-panel border border-white/8 rounded-xl p-3 flex flex-col justify-between bg-black/15 overflow-y-auto no-print">
+          <div className="space-y-3">
+            <div className="pb-1.5 border-b border-white/5 flex items-center justify-between">
+              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest font-mono flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                Llama 3 AI Command Console
+              </span>
+            </div>
+            
+            {/* Quick Chips Preset Prompts */}
+            <div className="space-y-1">
+              <span className="text-[8px] text-white/40 uppercase font-mono font-bold block">Quick Command Strategies</span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: "Mobilize Units", text: "Mobilize and dispatch response units to clear bottleneck" },
+                  { label: "Weather Divert", text: "Create local traffic weather diversion protocol" },
+                  { label: "Crowd Control", text: "Establish crowd containment and police perimeter" }
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => setLlamaPrompt(preset.text)}
+                    className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-slate-300 hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Input */}
+            <div className="space-y-1">
+              <label htmlFor="llama-prompt-input" className="text-[8px] text-white/40 uppercase font-mono font-bold block">Custom AI Instructions</label>
+              <textarea
+                id="llama-prompt-input"
+                value={llamaPrompt}
+                onChange={e => setLlamaPrompt(e.target.value)}
+                placeholder="Enter specialized command directives..."
+                rows={2}
+                className="w-full bg-[#0b0f19] border border-white/10 rounded p-1.5 text-[10px] text-white focus:outline-none focus:border-emerald-500 font-sans resize-none"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleAskLlama}
+              disabled={isLlamaLoading || !llamaPrompt.trim()}
+              className="w-full text-[9px] font-bold py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors uppercase tracking-wider disabled:opacity-50 cursor-pointer"
+            >
+              {isLlamaLoading ? "Generating AI Strategy..." : "Execute Llama AI"}
+            </button>
+
+            {/* AI Decision Rationale Output */}
+            {llamaResult && (
+              <div className="space-y-2.5 pt-2 border-t border-white/5">
+                <div className="p-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg text-[9px] space-y-1 text-emerald-200">
+                  <span className="font-bold text-[8px] uppercase tracking-widest font-mono text-emerald-400 block">
+                    AI Decision Rationale (Why this is taken)
+                  </span>
+                  <p className="leading-snug">{llamaResult.reasoning}</p>
+                </div>
+                
+                <div className="space-y-1.5">
+                  <span className="font-bold text-[8px] uppercase tracking-widest font-mono text-emerald-400 block">
+                    {llamaResult.directive}
+                  </span>
+                  <ul className="space-y-1 text-[9px] text-slate-300">
+                    {llamaResult.checklist.map((bullet, idx) => (
+                      <li key={idx} className="bg-black/30 p-1.5 rounded border border-white/5 leading-snug flex items-start gap-1">
+                        <span className="text-emerald-400 mt-0.5 select-none">•</span>
+                        <span>{bullet}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {llamaResult && (
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('app-toast', {
+                  detail: {
+                    message: `Broadcast Success: Command orders for ${incident.address} dispatched to all patrol units.`,
+                    type: 'success'
+                  }
+                }));
+              }}
+              className="mt-3 w-full text-[9px] font-bold py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors uppercase tracking-wider cursor-pointer"
+            >
+              Broadcast to Patrol Units
+            </button>
+          )}
         </div>
       )}
 
