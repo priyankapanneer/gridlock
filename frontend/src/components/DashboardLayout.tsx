@@ -27,7 +27,7 @@ export default function DashboardLayout() {
     setProxyAlerts, 
     simulationData, setSimulationData, 
     transitData, setTransitData,
-    selectedIncidentId,
+    selectedIncidentId, selectIncident,
     deployedRoutes, setDeployedRoutes,
     footfall, setFootfall,
     vehicles, setVehicles
@@ -174,8 +174,6 @@ export default function DashboardLayout() {
         const data = await res.json();
         switchRole(targetRole, station || undefined, data.access_token);
         setSimulationData(null);
-        setTransitData(null);
-        setShowBusLanes(false);
       }
     } catch (err) {
       console.error('Failed to switch role', err);
@@ -209,6 +207,18 @@ export default function DashboardLayout() {
     fetchIncidents();
     fetchProxyAlerts();
   }, [user?.username, user?.role, user?.token]);
+
+  useEffect(() => {
+    selectIncident(null);
+    setDeployedRoutes([]);
+    if (user?.role === 'Transit Planner') {
+      setShowBusLanes(true);
+      fetchTransitRecommendations(footfall, vehicles);
+    } else {
+      setShowBusLanes(false);
+      setTransitData(null);
+    }
+  }, [user?.role]);
 
   useEffect(() => {
     const handleGlobalClick = () => {
