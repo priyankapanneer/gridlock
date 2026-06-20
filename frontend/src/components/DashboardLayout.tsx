@@ -514,6 +514,22 @@ export default function DashboardLayout() {
           <div className={`transition-all duration-300 ease-in-out bg-[#090d16] shrink-0 overflow-hidden flex flex-col relative z-20 ${
             showBottomDeck ? 'h-72 border-t border-zinc-800' : 'h-0 border-t-0'
           }`}>
+            {showBottomDeck && (
+              <button 
+                onClick={() => {
+                  if (selectedIncidentId) {
+                    selectIncident(null);
+                  } else {
+                    setShowBusLanes(false);
+                    setTransitData(null);
+                  }
+                }}
+                className="absolute top-3 right-3 z-30 p-1.5 rounded-lg bg-zinc-950/80 border border-white/10 text-zinc-400 hover:text-white hover:bg-zinc-900 transition-all cursor-pointer shadow-lg"
+                title="Close Panel"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
             {selectedIncidentId ? (
               <AIInspectorDrawer />
             ) : showBusLanes && transitData ? (
