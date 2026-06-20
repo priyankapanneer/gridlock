@@ -41,7 +41,8 @@ async def startup_event():
     if db.query(Incident).count() == 0:
         print("Populating initial data from dataset...")
         import pandas as pd
-        dataset_path = r"D:\gridlock\Astram event data_anonymized - Astram event data_anonymizedb40ac87 (1).csv"
+        import os
+        dataset_path = os.path.join(os.path.dirname(__file__), "dataset.csv")
         try:
             df = pd.read_csv(dataset_path)
             # Only take the first 2000 rows to keep the UI snappy for the MVP

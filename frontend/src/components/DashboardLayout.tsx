@@ -56,7 +56,7 @@ export default function DashboardLayout() {
     if (!user?.token) return;
     setIsRefreshing(true);
     try {
-      const res = await fetch('http://localhost:8080/api/incidents', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/incidents`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       const data = await res.json();
@@ -75,7 +75,7 @@ export default function DashboardLayout() {
   const fetchProxyAlerts = async () => {
     if (!user?.token) return;
     try {
-      const res = await fetch('http://localhost:8080/api/proxy-alerts', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/proxy-alerts`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       if (res.ok) {
@@ -98,7 +98,7 @@ export default function DashboardLayout() {
         [77.5990, 12.9780]
       ];
       
-      const res = await fetch('http://localhost:8080/api/simulate', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/simulate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ export default function DashboardLayout() {
   const fetchTransitRecommendations = async (currentFootfall: number, currentVehicles: number) => {
     if (!user?.token) return;
     try {
-      const res = await fetch(`http://localhost:8080/api/transit/multi-modal?footfall=${currentFootfall}&vehicles=${currentVehicles}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/transit/multi-modal?footfall=${currentFootfall}&vehicles=${currentVehicles}`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       if (res.ok) {
@@ -158,7 +158,7 @@ export default function DashboardLayout() {
     if (!user?.token) return;
     try {
       const station = targetRole === 'Field Inspector' ? (targetPS || user?.police_station || 'HAL Old Airport') : null;
-      const res = await fetch('http://localhost:8080/api/auth/switch-role', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/auth/switch-role`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -183,7 +183,7 @@ export default function DashboardLayout() {
   const handleExportCSV = async () => {
     if (!user?.token) return;
     try {
-      const res = await fetch('http://localhost:8080/api/incidents/export/csv', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/incidents/export/csv`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       if (res.ok) {

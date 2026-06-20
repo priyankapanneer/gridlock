@@ -20,7 +20,7 @@ export default function MapWorkspace() {
 
   useEffect(() => {
     // Fetch clusters
-    fetch('http://localhost:8080/api/clusters')
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/clusters`)
       .then(res => res.json())
       .then(data => setClusters(data.clusters || []))
       .catch(err => console.error("Failed to fetch clusters", err));

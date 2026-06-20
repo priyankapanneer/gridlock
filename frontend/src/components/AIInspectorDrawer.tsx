@@ -43,7 +43,7 @@ export default function AIInspectorDrawer() {
     if (!user?.token) return;
     setIsUpdatingStatus(true);
     try {
-      const res = await fetch(`http://localhost:8080/api/incidents/${incident.id}/status?status=${newStatus}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/incidents/${incident.id}/status?status=${newStatus}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${user.token}`
@@ -65,7 +65,7 @@ export default function AIInspectorDrawer() {
     if (!user?.token) return;
     setIsSubmittingFeedback(true);
     try {
-      const res = await fetch(`http://localhost:8080/api/incidents/${incident.id}/feedback`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/incidents/${incident.id}/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,7 +92,7 @@ export default function AIInspectorDrawer() {
     setIsLlamaLoading(true);
     setLlamaResult(null);
     try {
-      const res = await fetch(`http://localhost:8080/api/incidents/${incident.id}/llama-command`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/incidents/${incident.id}/llama-command`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -32,7 +32,7 @@ export default function AuthPage() {
       formData.append('username', username);
       formData.append('password', password);
 
-      const res = await fetch('http://localhost:8080/api/auth/login', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/auth/login`, {
         method: 'POST',
         body: formData
       });
@@ -65,7 +65,7 @@ export default function AuthPage() {
     setIsLoading(true);
 
     try {
-      const regRes = await fetch('http://localhost:8080/api/auth/register', {
+      const regRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -87,7 +87,7 @@ export default function AuthPage() {
       formData.append('username', username);
       formData.append('password', password);
 
-      const loginRes = await fetch('http://localhost:8080/api/auth/login', {
+      const loginRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/auth/login`, {
         method: 'POST',
         body: formData
       });
@@ -119,7 +119,7 @@ export default function AuthPage() {
       formData.append('username', u);
       formData.append('password', 'password');
 
-      const res = await fetch('http://localhost:8080/api/auth/login', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/auth/login`, {
         method: 'POST',
         body: formData
       });
