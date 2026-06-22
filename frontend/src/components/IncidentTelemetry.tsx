@@ -1,4 +1,5 @@
-import { type Incident, useIncidentStore } from '@/store/incidentStore';
+import { useIncidentStore } from '@/store/incidentStore';
+import type { Incident } from '@/types';
 import { AlertCircle, MapPin, Clock, Flame, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

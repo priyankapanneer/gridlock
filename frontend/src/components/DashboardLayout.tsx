@@ -1,27 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useAuthStore, type Role } from '@/store/authStore';
+import { useAuthStore } from '@/store/authStore';
 import { useIncidentStore } from '@/store/incidentStore';
-import { Shield, ChevronDown, LogOut, User, RefreshCw, CheckCircle, Download, Compass, X } from 'lucide-react';
+import { RefreshCw, Download, Compass, X } from 'lucide-react';
 import MapWorkspace from './MapWorkspace';
 import IncidentTelemetry from './IncidentTelemetry';
 import AIInspectorDrawer from './AIInspectorDrawer';
-
-const ROLES: Role[] = ['Command Commissioner', 'Field Inspector', 'Transit Planner'];
-
-const ROLE_COLORS: Record<Role, string> = {
-  'Command Commissioner': 'text-blue-400 bg-blue-500/10 border-blue-500/30',
-  'Field Inspector':      'text-green-400 bg-green-500/10 border-green-500/30',
-  'Transit Planner':      'text-purple-400 bg-purple-500/10 border-purple-500/30',
-};
-
-const ROLE_DOTS: Record<Role, string> = {
-  'Command Commissioner': 'bg-blue-400',
-  'Field Inspector':      'bg-green-400',
-  'Transit Planner':      'bg-purple-400',
-};
+import Header from './layout/Header';
+import { useIncidentsQuery, useProxyAlertsQuery, useSimulationMutation, useTransitRecommendationsQuery } from '@/hooks/useIncidents';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function DashboardLayout() {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const { 
     setIncidents, incidents, 
     setProxyAlerts, 
@@ -33,10 +22,6 @@ export default function DashboardLayout() {
     vehicles, setVehicles
   } = useIncidentStore();
   
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Tactical Routing & Notification states
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
 
   const triggerToast = (message: string, type: 'success' | 'info' | 'warning' = 'success') => {
@@ -45,119 +30,62 @@ export default function DashboardLayout() {
     return () => clearTimeout(timer);
   };
   
-  // Sandbox simulation states
-  const [isSimulating, setIsSimulating] = useState(false);
-  
-  // Transit overlays state
   const [showBusLanes, setShowBusLanes] = useState(false);
 
-  const fetchIncidents = async () => {
-    if (!user?.token) return;
-    setIsRefreshing(true);
-    try {
-      const res = await fetch('http://localhost:8080/api/incidents', {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setIncidents(data);
-        triggerToast("Tactical logs synced with city telemetry feed.", "info");
-      }
-    } catch (err) {
-      console.error('Failed to fetch incidents', err);
-      triggerToast("Telemetry connection timeout.", "warning");
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+  const role = user?.role ?? 'Field Inspector';
+  const enableTransit = showBusLanes && role === 'Transit Planner';
 
-  const fetchProxyAlerts = async () => {
-    if (!user?.token) return;
-    try {
-      const res = await fetch('http://localhost:8080/api/proxy-alerts', {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setProxyAlerts(data);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  // React Query Hooks
+  const { data: incidentsData, isFetching: isRefreshing, refetch: fetchIncidents } = useIncidentsQuery();
+  const { data: proxyAlertsData } = useProxyAlertsQuery();
+  const { data: transitDataQuery } = useTransitRecommendationsQuery(footfall, vehicles, enableTransit);
+  const simulationMutation = useSimulationMutation();
 
-  const runSimulation = async () => {
-    if (!user?.token) return;
-    setIsSimulating(true);
-    try {
-      const coords = [
-        [77.5960, 12.9870],
-        [77.6010, 12.9920],
-        [77.6080, 12.9830],
-        [77.5990, 12.9780]
-      ];
-      
-      const res = await fetch('http://localhost:8080/api/simulate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
-        },
-        body: JSON.stringify({
-          coordinates: coords,
-          footfall,
-          vehicles
-        })
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
+  useEffect(() => {
+    if (incidentsData) {
+      setIncidents(incidentsData);
+    }
+  }, [incidentsData, setIncidents]);
+
+  useEffect(() => {
+    if (proxyAlertsData) {
+      setProxyAlerts(proxyAlertsData);
+    }
+  }, [proxyAlertsData, setProxyAlerts]);
+
+  useEffect(() => {
+    if (transitDataQuery && enableTransit) {
+      setTransitData(transitDataQuery);
+    } else if (!enableTransit) {
+      setTransitData(null);
+    }
+  }, [transitDataQuery, enableTransit, setTransitData]);
+
+  const runSimulation = () => {
+    const coords = [
+      [77.5960, 12.9870],
+      [77.6010, 12.9920],
+      [77.6080, 12.9830],
+      [77.5990, 12.9780]
+    ];
+    
+    simulationMutation.mutate({ coordinates: coords, footfall, vehicles }, {
+      onSuccess: (data) => {
         setSimulationData(data);
         triggerToast(`Simulation Complete: City impact is ${data.impact_level.toUpperCase()}. Spillback delay: +${data.predicted_spillback_minutes}m.`, 'info');
-        
-        // Dynamically update priority routes deck if transit overlay is enabled
-        if (showBusLanes) {
-          fetchTransitRecommendations(footfall, vehicles);
-        }
+      },
+      onError: () => {
+        triggerToast("Sandbox twin simulation failed to respond.", "warning");
       }
-    } catch (err) {
-      console.error(err);
-      triggerToast("Sandbox twin simulation failed to respond.", "warning");
-    } finally {
-      setIsSimulating(false);
-    }
+    });
   };
-
-  const fetchTransitRecommendations = async (currentFootfall: number, currentVehicles: number) => {
-    if (!user?.token) return;
-    try {
-      const res = await fetch(`http://localhost:8080/api/transit/multi-modal?footfall=${currentFootfall}&vehicles=${currentVehicles}`, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTransitData(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch transit recommendations", err);
-    }
-  };
-
-  const toggleBusLanes = async (checked: boolean) => {
-    setShowBusLanes(checked);
-    if (!checked) {
-      setTransitData(null);
-      return;
-    }
-    await fetchTransitRecommendations(footfall, vehicles);
-  };
-
-
+  
+  const isSimulating = simulationMutation.isPending;
 
   const handleExportCSV = async () => {
     if (!user?.token) return;
     try {
-      const res = await fetch('http://localhost:8080/api/incidents/export/csv', {
+      const res = await fetch(`${API_BASE_URL}/incidents/export/csv`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       if (res.ok) {
@@ -169,8 +97,6 @@ export default function DashboardLayout() {
         document.body.appendChild(a);
         a.click();
         a.remove();
-      } else {
-        console.error('Failed to export CSV');
       }
     } catch (err) {
       console.error(err);
@@ -178,29 +104,15 @@ export default function DashboardLayout() {
   };
 
   useEffect(() => {
-    fetchIncidents();
-    fetchProxyAlerts();
-  }, [user?.username, user?.role, user?.token]);
-
-  useEffect(() => {
     selectIncident(null);
     setDeployedRoutes([]);
     if (user?.role === 'Transit Planner') {
       setShowBusLanes(true);
-      fetchTransitRecommendations(footfall, vehicles);
     } else {
       setShowBusLanes(false);
       setTransitData(null);
     }
   }, [user?.role]);
-
-  useEffect(() => {
-    const handleGlobalClick = () => {
-      setShowUserMenu(false);
-    };
-    window.addEventListener('click', handleGlobalClick);
-    return () => window.removeEventListener('click', handleGlobalClick);
-  }, []);
 
   useEffect(() => {
     const handleToastEvent = (e: Event) => {
@@ -213,109 +125,11 @@ export default function DashboardLayout() {
     return () => window.removeEventListener('app-toast', handleToastEvent);
   }, []);
 
-  const highCount = incidents.filter(i => i.priority === 'High').length;
-  const role = user?.role ?? 'Field Inspector';
   const showBottomDeck = !!selectedIncidentId || (role === 'Transit Planner' && showBusLanes && !!transitData);
 
   return (
     <div className="w-screen h-screen flex flex-col bg-zinc-950 text-foreground overflow-hidden font-sans select-none">
-      {/* ── Solid Global Header (Top Anchor) ── */}
-      <header className="w-full h-16 bg-zinc-950 border-b border-zinc-800 shrink-0 flex items-center justify-between px-6 z-50">
-        {/* Left: Brand typography + pulsing system status */}
-        <div className="flex items-center gap-3">
-          <Shield className="w-5 h-5 text-rose-500 shrink-0" />
-          <span className="font-bold text-sm tracking-widest text-white">RESILIO COMMAND PLATFORM</span>
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-        </div>
-
-        {/* Center: Inline layouts (Role Selector, Jurisdiction selector, Transit Overlay, Sign-Out) */}
-        <div className="flex items-center gap-4 bg-zinc-900/60 border border-zinc-800/80 px-4 py-1.5 rounded-xl">
-          {/* Role Selector */}
-          <div className="relative">
-            <div
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-white/8 text-[11px] font-medium transition-all ${ROLE_COLORS[role]}`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full live-pulse ${ROLE_DOTS[role]}`} />
-              <span>{role}</span>
-            </div>
-          </div>
-
-          {/* Jurisdiction select dropdown */}
-          {role === 'Field Inspector' && (
-            <>
-              <div className="w-[1px] h-5 bg-white/10" />
-              <div className="bg-[#0b0f19]/80 border border-green-500/30 rounded-lg px-2 py-1 text-[11px] text-green-300 font-medium">
-                {user?.police_station || 'HAL Old Airport'} PS
-              </div>
-            </>
-          )}
-
-          {/* Transit Overlay Toggle */}
-          {role === 'Transit Planner' && (
-            <>
-              <div className="w-[1px] h-5 bg-white/10" />
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={showBusLanes} 
-                  onChange={e => toggleBusLanes(e.target.checked)} 
-                  className="rounded border-white/20 text-emerald-500 focus:ring-emerald-500 bg-[#0b0f19] h-3.5 w-3.5 cursor-pointer" 
-                />
-                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider font-mono">Transit Overlay</span>
-              </label>
-            </>
-          )}
-
-          <div className="w-[1px] h-5 bg-white/10" />
-
-          {/* User profile */}
-          <div className="relative">
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowUserMenu(v => !v); }}
-              className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
-              title={`${user?.username} (${user?.email})`}
-            >
-              <User className="w-3 h-3 text-white/70" />
-            </button>
-            {showUserMenu && (
-              <div className="absolute right-0 top-8 w-44 bg-zinc-950 rounded-lg shadow-2xl border border-white/8 py-1.5 overflow-hidden z-50">
-                <div className="px-3 py-1.5">
-                  <p className="text-[10px] font-semibold text-white/90">{user?.username}</p>
-                  <p className="text-[9px] text-white/40">{user?.email}</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="w-[1px] h-5 bg-white/10" />
-
-          {/* Separated Sign Out Button */}
-          <button
-            onClick={() => logout()}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 text-[10px] font-semibold transition-all duration-200 cursor-pointer"
-            title="Sign Out"
-          >
-            <LogOut className="w-3 h-3" />
-            <span>Sign Out</span>
-          </button>
-        </div>
-
-        {/* Right Area: Integrated Telemetry Counters (bright rose font-mono) */}
-        <div className="flex items-center gap-6 font-mono text-[11px] uppercase tracking-wider">
-          <div className="flex items-center gap-2">
-            <span className="text-zinc-400 font-semibold">Active Incidents:</span>
-            <span className="text-rose-400 font-bold text-sm tracking-widest">{incidents.length}</span>
-          </div>
-          <div className="w-[1px] h-4 bg-zinc-800" />
-          <div className="flex items-center gap-2">
-            <span className="text-zinc-400 font-semibold">Critical Threats:</span>
-            <span className="text-rose-400 font-bold text-sm tracking-widest">{highCount}</span>
-          </div>
-        </div>
-      </header>
+      <Header showBusLanes={showBusLanes} onToggleBusLanes={setShowBusLanes} />
 
       {/* ── Main Layout Body ── */}
       <div className="flex-1 flex overflow-hidden min-h-0">
@@ -331,7 +145,7 @@ export default function DashboardLayout() {
                 <Download className="w-3 h-3" />
                 <span>CSV</span>
               </button>
-              <button onClick={fetchIncidents} disabled={isRefreshing}
+              <button onClick={() => fetchIncidents()} disabled={isRefreshing}
                 className="flex items-center gap-1 text-[9px] text-white/40 hover:text-primary transition-colors disabled:opacity-50 cursor-pointer">
                 <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
               </button>

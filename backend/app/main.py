@@ -3,16 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base, SessionLocal, Incident, DbUser
 from app.api import auth, incidents, predict, optimize
 from datetime import datetime, timedelta
-
+from app.core.security import get_password_hash
+import os
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Resilio-Traffic API", version="1.0.0")
 
-# Setup CORS for frontend
+# Setup CORS for frontend securely
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # For dev, allow all
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,16 +34,17 @@ async def startup_event():
     if db.query(DbUser).count() == 0:
         print("Seeding default users...")
         db.add_all([
-            DbUser(username="commissioner1", password="password", role="Command Commissioner", email="commissioner@resilio.gov", police_station=None),
-            DbUser(username="inspector1", password="password", role="Field Inspector", email="inspector@resilio.gov", police_station="HAL Old Airport"),
-            DbUser(username="planner1", password="password", role="Transit Planner", email="planner@resilio.gov", police_station=None)
+            DbUser(username="commissioner1", password=get_password_hash("password"), role="Command Commissioner", email="commissioner@resilio.gov", police_station=None),
+            DbUser(username="inspector1", password=get_password_hash("password"), role="Field Inspector", email="inspector@resilio.gov", police_station="HAL Old Airport"),
+            DbUser(username="planner1", password=get_password_hash("password"), role="Transit Planner", email="planner@resilio.gov", police_station=None)
         ])
         db.commit()
 
     if db.query(Incident).count() == 0:
         print("Populating initial data from dataset...")
         import pandas as pd
-        dataset_path = r"D:\gridlock\Astram event data_anonymized - Astram event data_anonymizedb40ac87 (1).csv"
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        dataset_path = os.path.join(base_dir, "dataset.csv")
         try:
             df = pd.read_csv(dataset_path)
             # Only take the first 2000 rows to keep the UI snappy for the MVP

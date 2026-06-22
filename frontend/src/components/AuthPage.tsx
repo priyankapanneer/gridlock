@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuthStore, type Role } from '@/store/authStore';
-import { Shield, Eye, EyeOff, AlertCircle, Zap } from 'lucide-react';
+import { Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 type AuthView = 'login' | 'register';
 

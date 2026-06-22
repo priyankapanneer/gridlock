@@ -1,7 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type Role = 'Field Inspector' | 'Command Commissioner' | 'Transit Planner';
+import type { Role } from '../lib/constants';
+import { ROLES } from '../lib/constants';
+
+export type { Role };
+export { ROLES };
 
 export interface User {
   username: string;
@@ -22,15 +26,15 @@ interface AuthState {
 export const MOCK_USERS: Record<string, { password: string; user: User }> = {
   commissioner1: {
     password: 'password',
-    user: { username: 'commissioner1', role: 'Command Commissioner', email: 'commissioner@resilio.gov', token: 'mock-jwt-commissioner' }
+    user: { username: 'commissioner1', role: ROLES.COMMAND_COMMISSIONER, email: 'commissioner@resilio.gov', token: 'mock-jwt-commissioner' }
   },
   inspector1: {
     password: 'password',
-    user: { username: 'inspector1', role: 'Field Inspector', email: 'inspector@resilio.gov', police_station: 'Yelahanka', token: 'mock-jwt-inspector' }
+    user: { username: 'inspector1', role: ROLES.FIELD_INSPECTOR, email: 'inspector@resilio.gov', police_station: 'Yelahanka', token: 'mock-jwt-inspector' }
   },
   planner1: {
     password: 'password',
-    user: { username: 'planner1', role: 'Transit Planner', email: 'planner@resilio.gov', token: 'mock-jwt-planner' }
+    user: { username: 'planner1', role: ROLES.TRANSIT_PLANNER, email: 'planner@resilio.gov', token: 'mock-jwt-planner' }
   }
 };
 

@@ -1,34 +1,5 @@
 import { create } from 'zustand';
-
-export interface Incident {
-  id: string;
-  event_type: string;
-  latitude: number;
-  longitude: number;
-  address: string;
-  event_cause: string;
-  requires_road_closure: boolean;
-  start_datetime: string;
-  closed_datetime: string | null;
-  status: string;
-  priority: 'High' | 'Low';
-  corridor: string;
-  police_station: string;
-  zone: string;
-  description: string;
-  veh_type: string | null;
-}
-
-export interface Prediction {
-  eta_minutes: number;
-  shap_values: Record<string, number>;
-}
-
-export interface Prescriptive {
-  officers_needed: number;
-  barricades_needed: number;
-  bypass_routes: string[];
-}
+import type { Incident, Prediction, Prescriptive, ProxyAlert, SimulationData, TransitData } from '@/types';
 
 interface IncidentState {
   incidents: Incident[];
@@ -36,9 +7,9 @@ interface IncidentState {
   predictionData: Prediction | null;
   prescriptiveData: Prescriptive | null;
   isLoadingPredict: boolean;
-  proxyAlerts: any | null;
-  simulationData: any | null;
-  transitData: any | null;
+  proxyAlerts: ProxyAlert[] | null;
+  simulationData: SimulationData | null;
+  transitData: TransitData | null;
   sopBriefing: string[];
   deployedRoutes: string[];
   footfall: number;
@@ -46,9 +17,9 @@ interface IncidentState {
   setIncidents: (incidents: Incident[]) => void;
   selectIncident: (id: string | null) => void;
   fetchAIInsights: (id: string) => Promise<void>;
-  setProxyAlerts: (alerts: any) => void;
-  setSimulationData: (data: any) => void;
-  setTransitData: (data: any) => void;
+  setProxyAlerts: (alerts: ProxyAlert[] | null) => void;
+  setSimulationData: (data: SimulationData | null) => void;
+  setTransitData: (data: TransitData | null) => void;
   fetchSopBriefing: (id: string) => Promise<void>;
   setDeployedRoutes: (routes: string[] | ((prev: string[]) => string[])) => void;
   setFootfall: (val: number) => void;

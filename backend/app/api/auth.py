@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from app.core.security import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, oauth2_scheme, ALGORITHM, SECRET_KEY
+from app.core.security import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, oauth2_scheme, ALGORITHM, SECRET_KEY, get_password_hash, verify_password
 from datetime import timedelta
 from pydantic import BaseModel
 from typing import Optional
@@ -27,7 +27,7 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     
     new_user = DbUser(
         username=user_data.username,
-        password=user_data.password, # Plain text for demo simplicity
+        password=get_password_hash(user_data.password),
         role=user_data.role,
         police_station=user_data.police_station,
         email=user_data.email
@@ -40,7 +40,7 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
 @router.post("/login")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(DbUser).filter(DbUser.username == form_data.username).first()
-    if not user or user.password != form_data.password:
+    if not user or not verify_password(form_data.password, user.password):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
