@@ -16,7 +16,6 @@ interface AuthState {
   isAuthenticated: boolean;
   login: (user: User) => void;
   logout: () => void;
-  switchRole: (role: Role, police_station?: string, token?: string) => void;
 }
 
 // Default mock users list kept as local reference for login helper descriptions
@@ -42,14 +41,6 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       login: (user) => set({ user, isAuthenticated: true }),
       logout: () => set({ user: null, isAuthenticated: false }),
-      switchRole: (role, police_station, token) => set((state) => ({
-        user: state.user ? { 
-          ...state.user, 
-          role, 
-          police_station: police_station !== undefined ? police_station : state.user.police_station,
-          token: token || state.user.token 
-        } : null
-      })),
     }),
     { name: 'resilio-auth' }
   )

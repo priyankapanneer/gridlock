@@ -21,7 +21,7 @@ const ROLE_DOTS: Record<Role, string> = {
 };
 
 export default function DashboardLayout() {
-  const { user, logout, switchRole } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { 
     setIncidents, incidents, 
     setProxyAlerts, 
@@ -33,7 +33,6 @@ export default function DashboardLayout() {
     vehicles, setVehicles
   } = useIncidentStore();
   
-  const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -153,32 +152,7 @@ export default function DashboardLayout() {
     await fetchTransitRecommendations(footfall, vehicles);
   };
 
-  const handleSwitchRole = async (targetRole: Role, targetPS?: string) => {
-    setShowRoleMenu(false);
-    if (!user?.token) return;
-    try {
-      const station = targetRole === 'Field Inspector' ? (targetPS || user?.police_station || 'HAL Old Airport') : null;
-      const res = await fetch('http://localhost:8080/api/auth/switch-role', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
-        },
-        body: JSON.stringify({
-          role: targetRole,
-          police_station: station
-        })
-      });
 
-      if (res.ok) {
-        const data = await res.json();
-        switchRole(targetRole, station || undefined, data.access_token);
-        setSimulationData(null);
-      }
-    } catch (err) {
-      console.error('Failed to switch role', err);
-    }
-  };
 
   const handleExportCSV = async () => {
     if (!user?.token) return;
@@ -222,7 +196,6 @@ export default function DashboardLayout() {
 
   useEffect(() => {
     const handleGlobalClick = () => {
-      setShowRoleMenu(false);
       setShowUserMenu(false);
     };
     window.addEventListener('click', handleGlobalClick);
@@ -262,43 +235,21 @@ export default function DashboardLayout() {
         <div className="flex items-center gap-4 bg-zinc-900/60 border border-zinc-800/80 px-4 py-1.5 rounded-xl">
           {/* Role Selector */}
           <div className="relative">
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowRoleMenu(v => !v); setShowUserMenu(false); }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-white/8 text-[11px] font-medium transition-all hover:bg-white/5 ${ROLE_COLORS[role]}`}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-white/8 text-[11px] font-medium transition-all ${ROLE_COLORS[role]}`}
             >
               <span className={`w-1.5 h-1.5 rounded-full live-pulse ${ROLE_DOTS[role]}`} />
               <span>{role}</span>
-              <ChevronDown className="w-3 h-3 text-white/50" />
-            </button>
-            {showRoleMenu && (
-              <div className="absolute top-8 left-0 w-44 bg-zinc-950 rounded-lg border border-white/8 shadow-2xl py-1 overflow-hidden z-50">
-                {ROLES.map(r => (
-                  <button key={r} onClick={() => handleSwitchRole(r)}
-                    className={`w-full text-left px-3 py-1.5 text-[11px] flex items-center justify-between hover:bg-white/5 transition-colors ${r === role ? 'text-primary' : 'text-muted-foreground'}`}>
-                    <div className="flex items-center gap-1.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${ROLE_DOTS[r]}`} />
-                      {r}
-                    </div>
-                    {r === role && <CheckCircle className="w-3 h-3 text-primary" />}
-                  </button>
-                ))}
-              </div>
-            )}
+            </div>
           </div>
 
           {/* Jurisdiction select dropdown */}
           {role === 'Field Inspector' && (
             <>
               <div className="w-[1px] h-5 bg-white/10" />
-              <select
-                value={user?.police_station || 'HAL Old Airport'}
-                onChange={e => handleSwitchRole('Field Inspector', e.target.value)}
-                className="bg-[#0b0f19]/80 border border-green-500/30 rounded-lg px-2 py-1 text-[11px] text-green-300 font-medium focus:outline-none"
-              >
-                {['Yelahanka', 'HAL Old Airport', 'Sadashivanagar', 'Halasuru Gate', 'Byatarayanapura', 'Yeshwanthpura', 'Hennuru', 'Kodigehalli', 'Banaswadi', 'K.R. Pura'].map(ps => (
-                  <option key={ps} value={ps}>{ps} PS</option>
-                ))}
-              </select>
+              <div className="bg-[#0b0f19]/80 border border-green-500/30 rounded-lg px-2 py-1 text-[11px] text-green-300 font-medium">
+                {user?.police_station || 'HAL Old Airport'} PS
+              </div>
             </>
           )}
 
@@ -323,7 +274,7 @@ export default function DashboardLayout() {
           {/* User profile */}
           <div className="relative">
             <button
-              onClick={(e) => { e.stopPropagation(); setShowUserMenu(v => !v); setShowRoleMenu(false); }}
+              onClick={(e) => { e.stopPropagation(); setShowUserMenu(v => !v); }}
               className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
               title={`${user?.username} (${user?.email})`}
             >

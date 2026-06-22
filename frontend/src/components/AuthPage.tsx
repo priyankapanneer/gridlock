@@ -111,37 +111,7 @@ export default function AuthPage() {
     }
   };
 
-  const quickLogin = async (u: string) => {
-    setError('');
-    setIsLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('username', u);
-      formData.append('password', 'password');
 
-      const res = await fetch('http://localhost:8080/api/auth/login', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!res.ok) {
-        throw new Error('Quick login failed. Make sure the backend is running and seeded.');
-      }
-
-      const data = await res.json();
-      login({
-        username: u,
-        role: data.role,
-        police_station: data.police_station,
-        token: data.access_token,
-        email: data.email
-      });
-    } catch (err: any) {
-      setError(err.message || 'Failed to authenticate.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden">
@@ -228,17 +198,7 @@ export default function AuthPage() {
                 {isLoading ? <><span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" /> Authenticating...</> : 'Sign In to Command Center'}
               </button>
 
-              {/* Quick login */}
-              <div className="pt-4 border-t border-border">
-                <p className="text-xs text-muted-foreground text-center mb-3 flex items-center gap-2"><Zap className="w-3 h-3" />Quick Access (Demo)</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {[['commissioner1', 'Commissioner', 'bg-blue-500/10 text-blue-400 border-blue-500/20'], ['inspector1', 'Inspector', 'bg-green-500/10 text-green-400 border-green-500/20'], ['planner1', 'Planner', 'bg-purple-500/10 text-purple-400 border-purple-500/20']].map(([u, label, cls]) => (
-                    <button key={u} type="button" onClick={() => quickLogin(u)}
-                      className={`text-xs py-2 px-1 rounded-lg border font-medium transition-all hover:opacity-80 ${cls}`}
-                    >{label}</button>
-                  ))}
-                </div>
-              </div>
+
             </form>
           )}
 

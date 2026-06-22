@@ -17,9 +17,6 @@ class UserRegister(BaseModel):
     police_station: Optional[str] = None
     email: str
 
-class SwitchRoleRequest(BaseModel):
-    role: str
-    police_station: Optional[str] = None
 
 @router.post("/register")
 async def register(user_data: UserRegister, db: Session = Depends(get_db)):
@@ -59,25 +56,4 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         "email": user.email
     }
 
-@router.post("/switch-role")
-async def switch_role(req: SwitchRoleRequest, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
-        if not username:
-            raise HTTPException(status_code=401, detail="Invalid token claims")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
 
-    # Issue a new token with the new role/police station
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": username, "role": req.role, "police_station": req.police_station},
-        expires_delta=access_token_expires
-    )
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "role": req.role,
-        "police_station": req.police_station
-    }
