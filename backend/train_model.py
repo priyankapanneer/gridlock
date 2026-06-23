@@ -70,7 +70,7 @@ def build_pipeline():
     return pipeline
 
 def main():
-    dataset_path = r'D:\gridlock\Astram event data_anonymized - Astram event data_anonymizedb40ac87 (1).csv'
+    dataset_path = r'D:\gridlock\backend\app\dataset.csv'
     if not os.path.exists(dataset_path):
         print(f"Dataset not found at {dataset_path}")
         return
